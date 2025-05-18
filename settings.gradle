@@ -1,1 +1,4 @@
-rootProject.name = 'spring_multi_module'
+rootProject.name = 'online-reservation'
+include 'module-core'
+include 'module-api'
+include 'module-mapper'
