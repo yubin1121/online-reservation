@@ -1,0 +1,32 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.4.5'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'kr.co.module.mapper'
+version = '0.0.1-SNAPSHOT'
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+bootJar.enabled = false   // 맵퍼는 bootJar 로 패키징 할 필요 없음
+jar.enabled = true        //일반적인 JAR 파일로 패키징시킨다
+
+dependencies {
+    implementation project(':module-core')
+    implementation 'org.springframework.boot:spring-boot-starter'
+    implementation 'com.h2database:h2'
+
+
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
