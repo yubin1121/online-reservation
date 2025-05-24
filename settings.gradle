@@ -1,4 +1,4 @@
 rootProject.name = 'online-reservation'
 include 'module-core'
 include 'module-api'
-include 'module-mapper'
+include 'module-mapper' 

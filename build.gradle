@@ -1,17 +1,13 @@
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '3.4.5'
-    id 'io.spring.dependency-management' version '1.1.7'
-    id 'java-library'
+    id 'org.springframework.boot' version '3.4.5' apply false
+    id 'io.spring.dependency-management' version '1.1.7' apply false
+    id 'java-library' apply false
 }
-
-bootJar.enabled = false
-jar.enabled = true
 
 allprojects {
     group = 'kr.co.module'
     version = '0.0.1-SNAPSHOT'
-    sourceCompatibility = '17'
 }
 
 java {
@@ -19,8 +15,6 @@ java {
         languageVersion = JavaLanguageVersion.of(17)
     }
 }
-
-
 
 subprojects {
     // subprojects 블록 안에서는 plugins 블록을 사용할 수 없어, 플러그인 등록을 위해서는 apply plugin 을 사용해야한다.
@@ -44,11 +38,7 @@ subprojects {
 
     // 관리하는 모듈에 공통 dependencies
     dependencies {
-        implementation 'org.bgee.log4jdbc-log4j2:log4jdbc-log4j2-jdbc4.1:1.16'
-        implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.0'
-        runtimeOnly 'com.mysql:mysql-connector-j'
         compileOnly 'org.projectlombok:lombok'
-        implementation 'org.modelmapper:modelmapper:2.4.2'
         annotationProcessor 'org.projectlombok:lombok'
         annotationProcessor "org.springframework.boot:spring-boot-configuration-processor"
     }
