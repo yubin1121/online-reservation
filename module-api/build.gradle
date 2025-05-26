@@ -14,6 +14,8 @@ dependencies {
 	implementation project(':module-core')
 	implementation project(':module-mapper')
 	implementation 'org.springframework.boot:spring-boot-starter-web'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.0'
 }
 
