@@ -1,7 +1,10 @@
-package kr.co.module.core.dto.domain;
+package kr.co.module.api.admin.dto;
 
-import lombok.*;
-import org.springframework.data.annotation.Id;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
@@ -9,23 +12,25 @@ import java.util.List;
 import java.util.Map;
 
 @Data
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Document(collection = "product")
-public class ProductDto {
-    //상품 아이디
-    @Id
-    private Long productId;
+@Document(collection = "category")
+public class ProductCreateDto {
+
     //카테고리 아이디
+    @NotNull(message = "카테고리선택은 필수입니다.")
     private Long categoryId;
     //상품명
+    @NotBlank(message = "상품명은 필수입니다.")
     private String productName;
     //상품 설명
+    @NotBlank(message = "상품설명은 필수입니다.")
     private String productDesc;
     //상품 장소
+    @NotBlank(message = "위치는 필수입니다.")
     private String productPlace;
     //상품 위치
+    @NotBlank(message = "위치는 필수입니다.")
     private String productLocation;
     //상품 이미지 리스트
     private List<String> productImgList;
@@ -38,13 +43,6 @@ public class ProductDto {
     // 전체 예약 가능 수량
     private Integer totalQuantity;
 
-    private String crtrId;
-
-    private LocalDateTime cretDttm;
-
-    private String amnrId;
-
-    private LocalDateTime amndDttm;
-
-    private String dltYsno;
+    @NotBlank(message = "관리자 ID는 필수입니다.")
+    private String adminId;
 }

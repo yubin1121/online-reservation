@@ -1,17 +1,11 @@
 plugins {
-	id 'java'
-	id 'org.springframework.boot'
-	id 'io.spring.dependency-management'
+	id("java-common-conventions")
 }
 
 group = 'kr.co.module.core'
 version = '0.0.1-SNAPSHOT'
 
-bootJar.enabled = false   // 공통 모듈은 bootJar 로 패키징 할 필요 없음
-jar.enabled = true        //일반적인 JAR 파일로 패키징시킨다
-
 dependencies {
-	implementation 'org.springframework.boot:spring-boot-starter'
 	implementation 'org.springframework.boot:spring-boot-starter-aop'
 	api 'com.fasterxml.jackson.core:jackson-annotations:2.10.1'
 	api 'com.fasterxml.jackson.core:jackson-databind:2.13.5'

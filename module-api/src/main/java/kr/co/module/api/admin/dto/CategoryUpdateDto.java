@@ -1,38 +1,24 @@
-package kr.co.module.core.dto.domain;
-
+package kr.co.module.api.admin.dto;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-
-import java.time.LocalDateTime;
-
 @Data
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Document(collection = "category")
-public class CategoryDto {
-    //카테고리 id
+public class CategoryUpdateDto {
+    //카테고리명
     @Id
     private Long categoryId;
-    //카테고리명
-    private String categoryName;
     //카테고리 설명
     private String categoryDesc;
     //카테고리 정렬
     private Integer categoryOrder;
 
-    private String crtrId;
-
-    private LocalDateTime cretDttm;
-
-    private String amnrId;
-
-    private LocalDateTime amndDttm;
-
-    private String dltYsno;
+    @NotBlank(message = "관리자 ID는 필수입니다.")
+    private String adminId;
 
 }
-
-

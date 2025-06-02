@@ -1,21 +1,15 @@
 plugins {
-	id 'java'
-	id 'org.springframework.boot'
-	id 'io.spring.dependency-management'
+	id("java-common-conventions")
 }
 
 group = 'kr.co.module.api'
 version = '0.0.1-SNAPSHOT'
 
-bootJar.enabled = true
-jar.enabled = false
-
 dependencies {
 	implementation project(':module-core')
 	implementation project(':module-mapper')
 	implementation 'org.springframework.boot:spring-boot-starter-web'
-	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
-	implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.0'
+
 }
 
