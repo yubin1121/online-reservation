@@ -6,6 +6,7 @@ import kr.co.module.core.dto.domain.ProductDto;
 import kr.co.module.core.response.ApiResponse;
 import kr.co.module.core.response.ErrorResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -13,13 +14,12 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Slf4j
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/user/product/query")
 public class ProductQueryController {
     private final ProductQueryService productQueryService;
-
-    private static Logger logger = LoggerFactory.getLogger(ProductQueryController.class);
 
 
     @GetMapping("/search")
@@ -33,7 +33,7 @@ public class ProductQueryController {
                 || (searchDto.getSrchToDate() != null && !searchDto.getSrchToDate().isBlank());
 
          if (!(hasAdminId || hasCategoryId || hasPlace || hasDateRange)) {
-             logger.info("hasAdminId = " + hasAdminId + ", hasCategoryId = " + hasCategoryId + ", hasPlace = " + hasPlace + ", hasDateRange = " + hasDateRange);
+             log.info("hasAdminId = " + hasAdminId + ", hasCategoryId = " + hasCategoryId + ", hasPlace = " + hasPlace + ", hasDateRange = " + hasDateRange);
 
              return ResponseEntity.badRequest().body(
                     new ErrorResponse(ErrorCode.PRODUCT_REQUIRED_CONDITION.message(), ErrorCode.PRODUCT_REQUIRED_CONDITION.code(), null)

@@ -16,7 +16,7 @@ public class ReservationSearchDto {
     private String userId;
 
     //카테고리 아이디
-    private Long categoryId;
+    private String categoryId;
 
     @NotBlank(message = "조회일자는 필수입니다.")
     private String srchFromDate;

@@ -4,7 +4,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = "kr.co.module")
 @EnableMongoRepositories(basePackages = "kr.co.module.mapper.repository")
 public class ModuleApiApplication {
 

@@ -9,9 +9,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ProductSearchDto {
     //상품 관리자 아이디
-    private Long productAdminId;
+    private String productAdminId;
     //카테고리 아이디
-    private Long categoryId;
+    private String categoryId;
     //상품명
     private String productName;
     //상품 장소

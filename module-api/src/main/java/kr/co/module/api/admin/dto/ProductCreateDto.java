@@ -19,7 +19,7 @@ public class ProductCreateDto {
 
     //카테고리 아이디
     @NotNull(message = "카테고리선택은 필수입니다.")
-    private Long categoryId;
+    private String categoryId;
     //상품명
     @NotBlank(message = "상품명은 필수입니다.")
     private String productName;

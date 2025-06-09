@@ -25,7 +25,7 @@ public class AdminProductController {
     @PostMapping("register")
     public ResponseEntity<?> createProduct(@Valid @RequestBody ProductCreateDto productCreateDto) {
         ProductDto result = adminProductService.createProduct(productCreateDto);
-        if (result == null) {
+        if (result != null) {
             return ResponseEntity.ok(new ApiResponse<>(true, null, "상품 등록 성공", null));
         } else {
             return ResponseEntity.badRequest().body(
@@ -38,7 +38,7 @@ public class AdminProductController {
     @PutMapping("update/{productId}")
     public ResponseEntity<?> updateProduct(@Valid @RequestBody ProductUpdateDto productUpdateDto) {
         ProductDto result = adminProductService.updateProduct(productUpdateDto);
-        if (result == null) {
+        if (result != null) {
             return ResponseEntity.ok(new ApiResponse<>(true, null, "상품 수정 성공", null));
         } else {
             return ResponseEntity.badRequest().body(
@@ -51,7 +51,7 @@ public class AdminProductController {
     @DeleteMapping("delete/{productId}")
     public ResponseEntity<?> deleteProduct(@Valid @RequestBody ProductUpdateDto productUpdateDto) {
         ProductDto result = adminProductService.deleteProduct(productUpdateDto);
-        if (result == null) {
+        if (result != null) {
             return ResponseEntity.ok(new ApiResponse<>(true, null, "상품 삭제 성공", null));
         } else {
             return ResponseEntity.badRequest().body(

@@ -3,8 +3,7 @@ package kr.co.module.api.admin.service;
 import kr.co.module.api.admin.dto.*;
 import kr.co.module.core.dto.domain.*;
 import kr.co.module.mapper.repository.AdminProductRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -13,10 +12,9 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Slf4j
 @Service
 public class AdminProductService {
-
-    private static final Logger logger = LoggerFactory.getLogger(AdminProductService.class);
 
     private final MongoTemplate mongoTemplate;
 
@@ -57,7 +55,7 @@ public class AdminProductService {
 
 
         adminProductRepository.save(product);
-        logger.info(product.toString());
+        log.info(product.toString());
         return product;
     }
 
@@ -77,7 +75,7 @@ public class AdminProductService {
                     if (productUpdateDto.getProductAvlbMaxPerSlots() != null) product.setProductAvlbMaxPerSlots(productUpdateDto.getProductAvlbMaxPerSlots());
                     if (productUpdateDto.getTotalQuantity() != null) product.setTotalQuantity(productUpdateDto.getTotalQuantity());
                     product.setAmndDttm(LocalDateTime.now());
-                    logger.info(product.toString());
+                    log.info(product.toString());
                     return adminProductRepository.save(product);
                 })
                 .orElse(null);
@@ -91,7 +89,7 @@ public class AdminProductService {
                 .map(product -> {
                     product.setDltYsno("Y");
                     product.setAmndDttm(LocalDateTime.now());
-                    logger.info(product.toString());
+                    log.info(product.toString());
                     return adminProductRepository.save(product);
                 })
                 .orElse(null);

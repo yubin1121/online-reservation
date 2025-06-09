@@ -37,15 +37,15 @@ public class AdminReservationServiceTest {
     void updateReservationStatus_정상수정() {
         // given
         AdminReservationUpdateDto updateDto = new AdminReservationUpdateDto();
-        updateDto.setReservationId(1L);
+        updateDto.setReservationId("1");
         updateDto.setReservationStatus("CONFIRMED");
         updateDto.setAdminId("admin1");
 
         ReservationDto reservation = new ReservationDto();
-        reservation.setReservationId(1L);
+        reservation.setReservationId("1");
         reservation.setReservationStatus("PENDING");
 
-        when(adminReservationRepository.findById(1L)).thenReturn(Optional.of(reservation));
+        when(adminReservationRepository.findById("1")).thenReturn(Optional.of(reservation));
         when(adminReservationRepository.save(any(ReservationDto.class))).thenReturn(reservation);
 
         // when
@@ -63,8 +63,8 @@ public class AdminReservationServiceTest {
     void updateReservationStatus_없는예약() {
         // given
         AdminReservationUpdateDto updateDto = new AdminReservationUpdateDto();
-        updateDto.setReservationId(999L);
-        when(adminReservationRepository.findById(999L)).thenReturn(Optional.empty());
+        updateDto.setReservationId("999");
+        when(adminReservationRepository.findById("999")).thenReturn(Optional.empty());
 
         // when
         ReservationDto result = adminReservationService.updateReservationStatus(updateDto);
@@ -79,18 +79,18 @@ public class AdminReservationServiceTest {
         // given
         AdminReservationSearchDto searchDto = new AdminReservationSearchDto();
         searchDto.setAdminId("admin2");
-        searchDto.setProductId(10L);
-        searchDto.setCategoryId(20L);
+        searchDto.setProductId("10");
+        searchDto.setCategoryId("20");
 
         ProductDto p1 = ProductDto.builder()
-                .productId(10L)
-                .categoryId(20L)
+                .productId("10")
+                .categoryId("20")
                 .crtrId("admin2")
                 .build();
 
         ReservationDto r1 = new ReservationDto();
-        r1.setReservationId(100L);
-        r1.setProductId(10L);
+        r1.setReservationId("100");
+        r1.setProductId("10");
 
         when(mongoTemplate.find(any(Query.class), eq(ProductDto.class)))
                 .thenReturn(Arrays.asList(p1));
@@ -124,8 +124,8 @@ public class AdminReservationServiceTest {
         // given
         AdminReservationSearchDto searchDto = new AdminReservationSearchDto();
         searchDto.setAdminId("admin3");
-        searchDto.setProductId(0L);
-        searchDto.setCategoryId(0L);
+        searchDto.setProductId("0");
+        searchDto.setCategoryId("0");
 
         when(mongoTemplate.find(any(Query.class), eq(ProductDto.class)))
                 .thenReturn(Arrays.asList());

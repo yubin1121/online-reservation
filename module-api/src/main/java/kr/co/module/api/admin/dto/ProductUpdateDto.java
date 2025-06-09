@@ -17,9 +17,9 @@ import java.util.Map;
 @Document(collection = "product")
 public class ProductUpdateDto {
     @Id
-    private Long productId;
+    private String productId;
     //카테고리 아이디
-    private Long categoryId;
+    private String categoryId;
     private String productName;
     private String productDesc;
     private String productPlace;
