@@ -13,7 +13,7 @@ public class AdminReservationSearchDto {
     @NotBlank(message = "관리자 ID는 필수입니다.")
     private String adminId;
 
-    private long productId;
+    private String productId;
 
-    private long categoryId;
+    private String categoryId;
 }

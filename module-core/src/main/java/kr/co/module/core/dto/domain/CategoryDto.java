@@ -1,7 +1,9 @@
 package kr.co.module.core.dto.domain;
 
 import lombok.*;
+import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 
@@ -15,7 +17,7 @@ import java.time.LocalDateTime;
 public class CategoryDto {
     //카테고리 id
     @Id
-    private Long categoryId;
+    private String categoryId;
     //카테고리명
     private String categoryName;
     //카테고리 설명
@@ -25,14 +27,21 @@ public class CategoryDto {
 
     private String crtrId;
 
+    @CreatedDate
     private LocalDateTime cretDttm;
 
     private String amnrId;
 
+    @LastModifiedDate
     private LocalDateTime amndDttm;
 
     private String dltYsno;
 
+    public void markAsDeleted(String adminId) {
+        this.dltYsno = "Y";
+        this.amnrId = adminId;
+        this.amndDttm = LocalDateTime.now();
+    }
 }
 
 

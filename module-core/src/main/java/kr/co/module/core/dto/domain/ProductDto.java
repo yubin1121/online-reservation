@@ -1,7 +1,9 @@
 package kr.co.module.core.dto.domain;
 
 import lombok.*;
+import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
@@ -16,9 +18,9 @@ import java.util.Map;
 public class ProductDto {
     //상품 아이디
     @Id
-    private Long productId;
+    private String productId;
     //카테고리 아이디
-    private Long categoryId;
+    private String categoryId;
     //상품명
     private String productName;
     //상품 설명
@@ -40,10 +42,12 @@ public class ProductDto {
 
     private String crtrId;
 
+    @CreatedDate
     private LocalDateTime cretDttm;
 
     private String amnrId;
 
+    @LastModifiedDate
     private LocalDateTime amndDttm;
 
     private String dltYsno;

@@ -2,17 +2,18 @@ package kr.co.module.api.admin.service;
 import kr.co.module.api.admin.dto.*;
 import kr.co.module.core.dto.domain.*;
 import kr.co.module.mapper.repository.AdminReservationRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
-
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class AdminReservationService {
 
@@ -41,17 +42,17 @@ public class AdminReservationService {
     public List<ReservationDto> searchAdminReservations(AdminReservationSearchDto searchDto) {
         // 1. 상품 조건 동적 생성
         Criteria productCriteria = Criteria.where("crtrId").is(searchDto.getAdminId());
-        if (searchDto.getProductId() != 0) {
+        if (searchDto.getProductId() == null || searchDto.getProductId().isEmpty()) {
             productCriteria.and("productId").is(searchDto.getProductId());
         }
-        if (searchDto.getCategoryId() != 0) {
+        if (searchDto.getCategoryId() == null || searchDto.getCategoryId().isBlank()) {
             productCriteria.and("categoryId").is(searchDto.getCategoryId());
         }
 
         Query productQuery = new Query(productCriteria);
         List<ProductDto> myProducts = mongoTemplate.find(productQuery, ProductDto.class);
 
-        List<Long> myProductIds = myProducts.stream()
+        List<String> myProductIds = myProducts.stream()
                 .map(ProductDto::getProductId)
                 .collect(Collectors.toList());
 

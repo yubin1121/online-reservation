@@ -1,105 +1,120 @@
 package kr.co.module.api.admin.service;
 
-
 import kr.co.module.api.admin.dto.CategoryCreateDto;
 import kr.co.module.api.admin.dto.CategorySearchDto;
 import kr.co.module.api.admin.dto.CategoryUpdateDto;
 import kr.co.module.core.dto.domain.CategoryDto;
+import kr.co.module.core.exception.CategoryNotFoundException;
 import kr.co.module.mapper.repository.AdminCategoryRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Slf4j
 @Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class AdminCategoryService {
 
-    private static final Logger logger = LoggerFactory.getLogger(AdminCategoryService.class);
-
     private final MongoTemplate mongoTemplate;
-
     private final AdminCategoryRepository adminCategoryRepository;
 
-    public AdminCategoryService(MongoTemplate mongoTemplate, AdminCategoryRepository adminCategoryRepository) {
-        this.mongoTemplate = mongoTemplate;
-        this.adminCategoryRepository = adminCategoryRepository;
-    }
+    // 1. 생성
+    @Transactional
+    public CategoryDto createCategory(CategoryCreateDto dto) {
+        validateDuplicateCategory(dto.getCategoryName());
 
-    // 카테고리 생성
-    public CategoryDto createCategory(CategoryCreateDto categoryCreateDto) {
-        CategoryDto category = CategoryDto.builder()
-                .categoryName(categoryCreateDto.getCategoryName())
-                .categoryDesc(categoryCreateDto.getCategoryDesc())
-                .categoryOrder(categoryCreateDto.getCategoryOrder())
-                .crtrId(categoryCreateDto.getAdminId())
-                .cretDttm(LocalDateTime.now())
-                .amnrId(categoryCreateDto.getAdminId())
-                .amndDttm(LocalDateTime.now())
-                .dltYsno("N")
-                .build();
-
+        CategoryDto category = buildCategory(dto);
         adminCategoryRepository.save(category);
-        logger.info(category.toString());
+
+        log.info("Created category: ID={}, Name={}", category.getCategoryId(), category.getCategoryName());
         return category;
     }
 
-    // 카테고리 수정
-    public CategoryDto updateCategory(CategoryUpdateDto categoryUpdateDto) {
-        return adminCategoryRepository.findById(categoryUpdateDto.getCategoryId())
+    // 2. 수정
+    @Transactional
+    public CategoryDto updateCategory(CategoryUpdateDto dto) {
+        return adminCategoryRepository.findById(dto.getCategoryId())
                 .map(category -> {
-                    if (categoryUpdateDto.getCategoryDesc() != null && !categoryUpdateDto.getCategoryDesc().isBlank()) {
-                        category.setCategoryDesc(categoryUpdateDto.getCategoryDesc());
-                    }
-                    if (categoryUpdateDto.getCategoryOrder() != null) {
-                        category.setCategoryOrder(categoryUpdateDto.getCategoryOrder());
-                    }
-                    category.setAmnrId(categoryUpdateDto.getAdminId());
-                    category.setAmndDttm(LocalDateTime.now());
-                    adminCategoryRepository.save(category);
-                    return category;
+                    updateCategoryFields(category, dto);
+                    return adminCategoryRepository.save(category);
                 })
-                .orElse(null);
+                .orElseThrow(() -> new CategoryNotFoundException(dto.getCategoryId()));
     }
 
-
-    // 카테고리 삭제
-    public CategoryDto deleteCategory(CategoryUpdateDto categoryUpdateDto) {
-
-        return adminCategoryRepository.findById(categoryUpdateDto.getCategoryId())
+    // 3. 삭제
+    @Transactional
+    public CategoryDto deleteCategory(CategoryUpdateDto dto) {
+        return adminCategoryRepository.findById(dto.getCategoryId())
                 .map(category -> {
-                    category.setDltYsno("Y");
-                    category.setAmnrId(categoryUpdateDto.getAdminId());
-                    category.setAmndDttm(LocalDateTime.now());
-                    adminCategoryRepository.save(category);
-                    return category;
+                    category.markAsDeleted(dto.getAdminId());
+                    return adminCategoryRepository.save(category);
                 })
-                .orElse(null);
+                .orElseThrow(() -> new CategoryNotFoundException(dto.getCategoryId()));
     }
 
-    public List<CategoryDto> searchCategories(CategorySearchDto searchDto) {
+    // 4. 검색
+    public Page<CategoryDto> searchCategories(CategorySearchDto searchDto, Pageable pageable) {
+        Query query = buildSearchQuery(searchDto).with(pageable);
+        List<CategoryDto> content = mongoTemplate.find(query, CategoryDto.class);
+        long total = mongoTemplate.count(query, CategoryDto.class);
 
+        return new PageImpl<>(content, pageable, total);
+    }
+
+    private void validateDuplicateCategory(String name) {
+        if (adminCategoryRepository.existsByCategoryName(name)) {
+            throw new IllegalArgumentException("Duplicate category name: " + name);
+        }
+    }
+
+    private CategoryDto buildCategory(CategoryCreateDto dto) {
+        return CategoryDto.builder()
+                .categoryName(dto.getCategoryName())
+                .categoryDesc(dto.getCategoryDesc())
+                .categoryOrder(dto.getCategoryOrder())
+                .crtrId(dto.getAdminId())
+                .amnrId(dto.getAdminId())
+                .dltYsno("N")
+                .build();
+    }
+
+    private void updateCategoryFields(CategoryDto category, CategoryUpdateDto dto) {
+        if (StringUtils.hasText(dto.getCategoryDesc())) {
+            category.setCategoryDesc(dto.getCategoryDesc());
+        }
+        if (dto.getCategoryOrder() != null) {
+            category.setCategoryOrder(dto.getCategoryOrder());
+        }
+        category.setAmnrId(dto.getAdminId());
+        category.setAmndDttm(LocalDateTime.now());
+    }
+
+    private Query buildSearchQuery(CategorySearchDto searchDto) {
         Criteria criteria = new Criteria();
 
-        // 동적 조건 추가
-        if (searchDto.getCategoryName() != null && !searchDto.getCategoryName().isBlank()) {
-            criteria.and("categoryName").regex(".*" + searchDto.getCategoryName() + ".*"); // 부분 일치
+        if (StringUtils.hasText(searchDto.getCategoryName())) {
+            criteria.and("categoryName").regex(searchDto.getCategoryName(), "i"); // 대소문자 구분 없이 검색
         }
         if (searchDto.getCategoryOrder() != null) {
             criteria.and("categoryOrder").is(searchDto.getCategoryOrder());
         }
-        if (searchDto.getAdminId() != null && !searchDto.getAdminId().isBlank()) {
+        if (StringUtils.hasText(searchDto.getAdminId())) {
             criteria.and("crtrId").is(searchDto.getAdminId());
         }
-        // 삭제된 건 제외
         criteria.and("dltYsno").ne("Y");
 
-        Query query = new Query(criteria);
-        return mongoTemplate.find(query, CategoryDto.class);
+        return new Query(criteria);
     }
-
 }

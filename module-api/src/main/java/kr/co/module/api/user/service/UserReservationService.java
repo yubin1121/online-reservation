@@ -7,8 +7,7 @@ import kr.co.module.core.dto.domain.ProductDto;
 import kr.co.module.core.status.ReservationStatus;
 import kr.co.module.mapper.repository.AdminProductRepository;
 import kr.co.module.mapper.repository.UserReservationRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -17,9 +16,9 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.*;
 
+@Slf4j
 @Service
 public class UserReservationService {
-    private static final Logger logger = LoggerFactory.getLogger(UserReservationService.class);
 
     private final AdminProductRepository productRepository;
     private final UserReservationRepository reservationRepository;

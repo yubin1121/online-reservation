@@ -25,7 +25,7 @@ public class UserReservationController {
     @PostMapping("request")
     public ResponseEntity<?> reserve(@Valid @RequestBody ReservationRequestDto requestDto) {
         ReservationDto result = userReservationService.reserve(requestDto);
-        if (result == null) {
+        if (result != null) {
             return ResponseEntity.ok(new ApiResponse<>(true, null, "예약 신청 성공", null));
         } else {
             return ResponseEntity.badRequest().body(
@@ -38,7 +38,7 @@ public class UserReservationController {
     @PutMapping("modify")
     public ResponseEntity<?> updateReservation(@Valid @RequestBody ReservationUpdateDto updateDto) {
         ReservationDto result = userReservationService.updateReservation(updateDto);
-        if (result == null) {
+        if (result != null) {
             return ResponseEntity.ok(new ApiResponse<>(true, null, "예약 변경 성공", null));
         } else {
             return ResponseEntity.badRequest().body(
@@ -51,7 +51,7 @@ public class UserReservationController {
     @PostMapping("cancel")
     public ResponseEntity<?> cancelReservation(@Valid @RequestBody ReservationUpdateDto cancelDto) {
         ReservationDto result = userReservationService.cancelReservation(cancelDto);
-        if (result == null) {
+        if (result != null) {
             return ResponseEntity.ok(new ApiResponse<>(true, null, "예약 취소 성공", null));
         } else {
             return ResponseEntity.badRequest().body(

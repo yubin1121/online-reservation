@@ -3,6 +3,7 @@ package kr.co.module.api.user.service;
 import kr.co.module.api.user.dto.ProductSearchDto;
 import kr.co.module.core.dto.domain.ProductDto;
 import kr.co.module.mapper.repository.AdminProductRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -12,9 +13,9 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+@Slf4j
 @Service
 public class ProductQueryService {
-    private static final Logger logger = LoggerFactory.getLogger(ProductQueryService.class);
 
     private final MongoTemplate mongoTemplate;
     private final AdminProductRepository adminProductRepository;

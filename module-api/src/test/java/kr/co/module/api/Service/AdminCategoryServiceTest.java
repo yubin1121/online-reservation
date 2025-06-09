@@ -4,32 +4,45 @@ import kr.co.module.api.admin.dto.*;
 import kr.co.module.api.admin.service.AdminCategoryService;
 import kr.co.module.core.dto.domain.CategoryDto;
 import kr.co.module.mapper.repository.AdminCategoryRepository;
+import org.bson.Document;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Query;
 
-import java.util.Arrays;
-import java.util.List;
+import java.util.Collections;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
 public class AdminCategoryServiceTest {
 
+    @Mock
     private MongoTemplate mongoTemplate;
 
+    @InjectMocks
     private AdminCategoryService adminCategoryService;
 
-    AdminCategoryRepository adminCategoryRepository = mock(AdminCategoryRepository.class);
+    @Mock
+    AdminCategoryRepository adminCategoryRepository;
 
-    @BeforeEach
-    void setUp() {
-        mongoTemplate = mock(MongoTemplate.class);
-        adminCategoryService = new AdminCategoryService(mongoTemplate, adminCategoryRepository);
+    @AfterEach
+    void tearDown() {
+        reset(mongoTemplate, adminCategoryRepository);
     }
+
     @Test
     void createCategory_정상생성() {
         // given
@@ -41,10 +54,11 @@ public class AdminCategoryServiceTest {
 
         ArgumentCaptor<CategoryDto> captor = ArgumentCaptor.forClass(CategoryDto.class);
 
-        // when
+        when(adminCategoryRepository.save(any(CategoryDto.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
         CategoryDto result = adminCategoryService.createCategory(createDto);
 
-        // then
         verify(adminCategoryRepository, times(1)).save(captor.capture());
         CategoryDto saved = captor.getValue();
         assertEquals("카테고리1", saved.getCategoryName());
@@ -59,13 +73,13 @@ public class AdminCategoryServiceTest {
     void updateCategory_정상수정() {
         // given
         CategoryUpdateDto updateDto = new CategoryUpdateDto();
-        updateDto.setCategoryId(100L);
+        updateDto.setCategoryId("100");
         updateDto.setCategoryDesc("수정된 설명");
         updateDto.setCategoryOrder(2);
         updateDto.setAdminId("admin2");
 
         CategoryDto origin = CategoryDto.builder()
-                .categoryId(100L)
+                .categoryId("100")
                 .categoryName("카테고리1")
                 .categoryDesc("기존 설명")
                 .categoryOrder(1)
@@ -73,7 +87,7 @@ public class AdminCategoryServiceTest {
                 .dltYsno("N")
                 .build();
 
-        when(adminCategoryRepository.findById(100L)).thenReturn(Optional.of(origin));
+        when(adminCategoryRepository.findById("100")).thenReturn(Optional.of(origin));
         when(adminCategoryRepository.save(any(CategoryDto.class))).thenReturn(origin);
 
         // when
@@ -92,8 +106,8 @@ public class AdminCategoryServiceTest {
     void updateCategory_없는카테고리() {
         // given
         CategoryUpdateDto updateDto = new CategoryUpdateDto();
-        updateDto.setCategoryId(999L);
-        when(adminCategoryRepository.findById(999L)).thenReturn(Optional.empty());
+        updateDto.setCategoryId("999");
+        when(adminCategoryRepository.findById("999")).thenReturn(Optional.empty());
 
         // when
         CategoryDto result = adminCategoryService.updateCategory(updateDto);
@@ -107,16 +121,16 @@ public class AdminCategoryServiceTest {
     void deleteCategory_정상삭제() {
         // given
         CategoryUpdateDto updateDto = new CategoryUpdateDto();
-        updateDto.setCategoryId(200L);
+        updateDto.setCategoryId("200");
         updateDto.setAdminId("admin3");
 
         CategoryDto origin = CategoryDto.builder()
-                .categoryId(200L)
+                .categoryId("200")
                 .categoryName("카테고리2")
                 .dltYsno("N")
                 .build();
 
-        when(adminCategoryRepository.findById(200L)).thenReturn(Optional.of(origin));
+        when(adminCategoryRepository.findById("200")).thenReturn(Optional.of(origin));
         when(adminCategoryRepository.save(any(CategoryDto.class))).thenReturn(origin);
 
         // when
@@ -134,8 +148,8 @@ public class AdminCategoryServiceTest {
     void deleteCategory_없는카테고리() {
         // given
         CategoryUpdateDto updateDto = new CategoryUpdateDto();
-        updateDto.setCategoryId(888L);
-        when(adminCategoryRepository.findById(888L)).thenReturn(Optional.empty());
+        updateDto.setCategoryId("888");
+        when(adminCategoryRepository.findById("888")).thenReturn(Optional.empty());
 
         // when
         CategoryDto result = adminCategoryService.deleteCategory(updateDto);
@@ -154,31 +168,46 @@ public class AdminCategoryServiceTest {
         searchDto.setAdminId("admin4");
 
         CategoryDto c1 = CategoryDto.builder()
-                .categoryId(1L)
+                .categoryId("100")
                 .categoryName("테스트카테고리")
                 .categoryOrder(3)
                 .crtrId("admin4")
                 .dltYsno("N")
                 .build();
+        Pageable pageable = PageRequest.of(0, 10);
 
         when(mongoTemplate.find(any(Query.class), eq(CategoryDto.class)))
-                .thenReturn(Arrays.asList(c1));
+                .thenReturn(Collections.singletonList(c1));
 
         // when
-        List<CategoryDto> result = adminCategoryService.searchCategories(searchDto);
+        Page<CategoryDto> result = adminCategoryService.searchCategories(searchDto, pageable);
 
         // then
         assertNotNull(result);
-        assertEquals(1, result.size());
-        assertEquals("테스트카테고리", result.get(0).getCategoryName());
+        assertEquals(1, result.getContent().size());
+        assertEquals("테스트카테고리", result.getContent().get(0).getCategoryName());
 
-        // 쿼리 내부 조건 검증 (선택)
         ArgumentCaptor<Query> queryCaptor = ArgumentCaptor.forClass(Query.class);
         verify(mongoTemplate).find(queryCaptor.capture(), eq(CategoryDto.class));
         Query usedQuery = queryCaptor.getValue();
-        assertTrue(usedQuery.toString().contains("categoryName"));
-        assertTrue(usedQuery.toString().contains("categoryOrder"));
-        assertTrue(usedQuery.toString().contains("crtrId"));
+
+        Document queryDoc = usedQuery.getQueryObject();
+
+        // categoryName 검증
+        assertTrue(queryDoc.get("categoryName") instanceof Pattern);
+        Pattern namePattern = (Pattern) queryDoc.get("categoryName");
+        assertEquals("테스트", namePattern.pattern());
+
+        // categoryOrder 검증
+        assertEquals(3, queryDoc.getInteger("categoryOrder"));
+
+        // crtrId 검증
+        assertEquals("admin4", queryDoc.getString("crtrId"));
+
+        // dltYsno 타입
+        assertTrue(queryDoc.get("dltYsno") instanceof String);
+        assertEquals("N", queryDoc.get("dltYsno"));
     }
+
 
 }

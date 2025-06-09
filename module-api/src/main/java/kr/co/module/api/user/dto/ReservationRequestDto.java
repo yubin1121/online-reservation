@@ -14,7 +14,7 @@ public class ReservationRequestDto {
 
     // 상품 아이디
     @Id
-    private Long productId;
+    private String productId;
     // 예약자 아이디
     private String userId;
     // 예약 일자

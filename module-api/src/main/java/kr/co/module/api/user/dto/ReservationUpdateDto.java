@@ -14,7 +14,7 @@ public class ReservationUpdateDto {
 
     // 예약 아이디(상품ID+예약자ID+일자+시간)
     @Id
-    private Long reservationId;
+    private String reservationId;
     // 예약자 아이디
     private String userId;
     // 예약 일자

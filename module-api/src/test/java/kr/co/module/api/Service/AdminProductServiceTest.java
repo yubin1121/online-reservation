@@ -36,7 +36,7 @@ public class AdminProductServiceTest {
         searchDto.setAdminId("admin1");
 
         ProductDto p1 = ProductDto.builder()
-                .productId(1L)
+                .productId("1")
                 .productName("상품1")
                 .crtrId("admin1")
                 .build();
@@ -62,7 +62,7 @@ public class AdminProductServiceTest {
     void createProduct_정상생성() {
         // given
         ProductCreateDto createDto = new ProductCreateDto();
-        createDto.setCategoryId(10L);
+        createDto.setCategoryId("10");
         createDto.setProductName("신상품");
         createDto.setProductDesc("설명");
         createDto.setProductPlace("장소");
@@ -88,18 +88,18 @@ public class AdminProductServiceTest {
     void updateProduct_정상수정() {
         // given
         ProductUpdateDto updateDto = new ProductUpdateDto();
-        updateDto.setProductId(100L);
+        updateDto.setProductId("100");
         updateDto.setProductName("수정상품");
         updateDto.setAdminId("admin3");
 
         ProductDto origin = ProductDto.builder()
-                .productId(100L)
+                .productId("100")
                 .productName("기존상품")
                 .crtrId("admin3")
                 .dltYsno("N")
                 .build();
 
-        when(adminProductRepository.findById(100L)).thenReturn(Optional.of(origin));
+        when(adminProductRepository.findById("100")).thenReturn(Optional.of(origin));
         when(adminProductRepository.save(any(ProductDto.class))).thenReturn(origin);
 
         // when
@@ -117,18 +117,18 @@ public class AdminProductServiceTest {
     void updateProduct_권한없음_수정불가() {
         // given
         ProductUpdateDto updateDto = new ProductUpdateDto();
-        updateDto.setProductId(200L);
+        updateDto.setProductId("200");
         updateDto.setProductName("수정상품");
         updateDto.setAdminId("adminX");
 
         ProductDto origin = ProductDto.builder()
-                .productId(200L)
+                .productId("200")
                 .productName("기존상품")
                 .crtrId("adminY")
                 .dltYsno("N")
                 .build();
 
-        when(adminProductRepository.findById(200L)).thenReturn(Optional.of(origin));
+        when(adminProductRepository.findById("200")).thenReturn(Optional.of(origin));
 
         // when
         ProductDto result = adminProductService.updateProduct(updateDto);
@@ -142,17 +142,17 @@ public class AdminProductServiceTest {
     void deleteProduct_정상삭제() {
         // given
         ProductUpdateDto updateDto = new ProductUpdateDto();
-        updateDto.setProductId(300L);
+        updateDto.setProductId("300");
         updateDto.setAdminId("admin4");
 
         ProductDto origin = ProductDto.builder()
-                .productId(300L)
+                .productId("300")
                 .productName("상품삭제")
                 .crtrId("admin4")
                 .dltYsno("N")
                 .build();
 
-        when(adminProductRepository.findById(300L)).thenReturn(Optional.of(origin));
+        when(adminProductRepository.findById("300")).thenReturn(Optional.of(origin));
         when(adminProductRepository.save(any(ProductDto.class))).thenReturn(origin);
 
         // when
@@ -169,17 +169,17 @@ public class AdminProductServiceTest {
     void deleteProduct_권한없음_삭제불가() {
         // given
         ProductUpdateDto updateDto = new ProductUpdateDto();
-        updateDto.setProductId(400L);
+        updateDto.setProductId("400");
         updateDto.setAdminId("adminX");
 
         ProductDto origin = ProductDto.builder()
-                .productId(400L)
+                .productId("400")
                 .productName("상품삭제")
                 .crtrId("adminY")
                 .dltYsno("N")
                 .build();
 
-        when(adminProductRepository.findById(400L)).thenReturn(Optional.of(origin));
+        when(adminProductRepository.findById("400")).thenReturn(Optional.of(origin));
 
         // when
         ProductDto result = adminProductService.deleteProduct(updateDto);
