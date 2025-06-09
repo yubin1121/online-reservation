@@ -1,7 +1,5 @@
 plugins {
-    id 'java'
-    id 'org.springframework.boot'
-    id 'io.spring.dependency-management'
+    id("java-common-conventions")
 }
 
 group = 'kr.co.module.mapper'
@@ -11,12 +9,8 @@ repositories {
     mavenCentral()
 }
 
-bootJar.enabled = false   // 맵퍼는 bootJar 로 패키징 할 필요 없음
-jar.enabled = true        //일반적인 JAR 파일로 패키징시킨다
-
 dependencies {
     implementation project(':module-core')
-    implementation 'org.springframework.boot:spring-boot-starter'
-    implementation 'com.h2database:h2'
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
 
 }
