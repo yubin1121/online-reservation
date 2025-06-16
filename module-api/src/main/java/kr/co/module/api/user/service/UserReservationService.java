@@ -1,16 +1,24 @@
 package kr.co.module.api.user.service;
+import kr.co.module.api.admin.dto.CategoryCreateDto;
 import kr.co.module.api.user.dto.ReservationRequestDto;
 import kr.co.module.api.user.dto.ReservationSearchDto;
 import kr.co.module.api.user.dto.ReservationUpdateDto;
+import kr.co.module.core.dto.domain.CategoryDto;
 import kr.co.module.core.dto.domain.ReservationDto;
 import kr.co.module.core.dto.domain.ProductDto;
+import kr.co.module.core.exception.InsufficientStockException;
+import kr.co.module.core.exception.ProductNotFoundException;
+import kr.co.module.core.exception.ReservationNotFoundException;
 import kr.co.module.core.status.ReservationStatus;
 import kr.co.module.mapper.repository.AdminProductRepository;
 import kr.co.module.mapper.repository.UserReservationRepository;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -18,130 +26,130 @@ import java.util.*;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class UserReservationService {
 
     private final AdminProductRepository productRepository;
     private final UserReservationRepository reservationRepository;
     private final MongoTemplate mongoTemplate;
 
-    public UserReservationService(AdminProductRepository productRepository,
-                                  UserReservationRepository reservationRepository,
-                                  MongoTemplate mongoTemplate) {
-        this.productRepository = productRepository;
-        this.reservationRepository = reservationRepository;
-        this.mongoTemplate = mongoTemplate;
+    private void validateReservation(ProductDto product, int count) {
+        if ("Y".equals(product.getDltYsno())) {
+            throw new IllegalStateException("삭제된 상품입니다");
+        }
+        if (product.getTotalQuantity() < count) {
+            throw new InsufficientStockException(
+                    "재고 부족: 요청 " + count + "/현재 " + product.getTotalQuantity()
+            );
+        }
+    }
+
+    private void validateOwnership(ReservationDto reservation, String userId) {
+        if (!reservation.getUserId().equals(userId)) {
+            throw new SecurityException("예약 소유자가 아닙니다");
+        }
+    }
+
+    private void validateStatus(ReservationDto reservation, EnumSet<ReservationStatus> allowed) {
+        ReservationStatus status = ReservationStatus.valueOf(reservation.getReservationStatus());
+        if (!allowed.contains(status)) {
+            throw new IllegalStateException("허용되지 않은 상태: " + status);
+        }
+    }
+
+    private void handleStockChange(ReservationDto reservation, Integer newCount) {
+        if (newCount != null && !newCount.equals(reservation.getReservationCnt())) {
+            int delta = newCount - reservation.getReservationCnt();
+            updateProductStock(reservation.getProductId(), -delta);
+            reservation.setReservationCnt(newCount);
+        }
+    }
+
+    private void updateProductStock(String productId, int quantityDelta) {
+        Query query = new Query(Criteria.where("_id").is(productId));
+        Update update = new Update().inc("totalQuantity", quantityDelta);
+        mongoTemplate.updateFirst(query, update, ProductDto.class);
+    }
+
+    private ReservationDto buildReservation(ReservationRequestDto dto) {
+        return ReservationDto.builder()
+                .reservationId(dto.getProductId()+dto.getUserId()+dto.getReservationDate()+dto.getReservationTime())
+                .reservationStatus("PENDING")
+                .reservationTime(dto.getReservationTime())
+                .reservationDate(dto.getReservationDate())
+                .reservationCnt(dto.getReservationCnt())
+                .crtrId(dto.getUserId())
+                .amnrId(dto.getUserId())
+                .dltYsno("N")
+                .build();
     }
 
     // 예약 신청
     public ReservationDto reserve(ReservationRequestDto request) {
-        Optional<ProductDto> productOpt = productRepository.findById(request.getProductId());
-        if (productOpt.isEmpty()) return null;
-        ProductDto product = productOpt.get();
+        ProductDto product = productRepository.findById(request.getProductId())
+                .orElseThrow(() -> new ProductNotFoundException(request.getProductId()));
 
-        // 예약 가능 여부 체크
-        if ("Y".equals(product.getDltYsno())) return null;
-        if (product.getTotalQuantity() == null || product.getTotalQuantity() < request.getReservationCnt()) return null;
+        validateReservation(product, request.getReservationCnt());
 
-        // 예약 정보 저장
-        ReservationDto reservation = ReservationDto.builder()
-                //.reservationId(자동생성)
-                .productId(request.getProductId())
-                .userId(request.getUserId())
-                .reservationDate(request.getReservationDate())
-                .reservationTime(request.getReservationTime())
-                .reservationCnt(request.getReservationCnt())
-                .reservationStatus(ReservationStatus.COMPLETED.name())
-                .crtrId(request.getUserId())
-                .cretDttm(LocalDateTime.now())
-                .amnrId(request.getUserId())
-                .amndDttm(LocalDateTime.now())
-                .dltYsno("N")
-                .build();
+        ReservationDto reservation = buildReservation(request);
+        reservationRepository.save(reservation);
 
-        reservation = reservationRepository.save(reservation);
-
-        // 상품 수량 차감
-        product.setTotalQuantity(product.getTotalQuantity() - request.getReservationCnt());
-        productRepository.save(product);
-
+        updateProductStock(product.getProductId(), -request.getReservationCnt());
+        log.info("예약 생성: {}", reservation);
         return reservation;
     }
 
-    // 예약 변경 (수정)
-    public ReservationDto updateReservation(ReservationUpdateDto updateDto) {
-        Optional<ReservationDto> reservationOpt = reservationRepository.findById(updateDto.getReservationId());
-        if (reservationOpt.isEmpty()) return null;
-
-        ReservationDto reservation = reservationOpt.get();
-
-        // 본인 예약만 수정 가능
-        if (!reservation.getUserId().equals(updateDto.getUserId())) return null;
-
-        // 상태 체크
-        ReservationStatus status;
-        try {
-            status = ReservationStatus.valueOf(reservation.getReservationStatus());
-        } catch (Exception e) {
-            return null;
+    private void updateReservationDetails(ReservationDto reservation, ReservationUpdateDto updateDto) {
+        // 1. 날짜 업데이트
+        if (updateDto.getReservationDate() != null) {
+            reservation.setReservationDate(updateDto.getReservationDate());
         }
-        if (!(status == ReservationStatus.PENDING || status == ReservationStatus.CONFIRMED)) return null;
 
-        // 예약 수량 변경
-        int oldCnt = reservation.getReservationCnt();
-        int newCnt = updateDto.getReservationCnt() != null ? updateDto.getReservationCnt() : oldCnt;
+        // 2. 시간 업데이트
+        if (updateDto.getReservationTime() != null) {
+            reservation.setReservationTime(updateDto.getReservationTime());
+        }
 
-        if (updateDto.getReservationCnt() != null && newCnt != oldCnt) {
-            Optional<ProductDto> productOpt = productRepository.findById(reservation.getProductId());
-            if (productOpt.isPresent()) {
-                ProductDto product = productOpt.get();
-                int diff = newCnt - oldCnt;
-                int currentQty = product.getTotalQuantity();
-                if (diff > 0 && currentQty < diff) return null; // 추가 수량 부족
-                product.setTotalQuantity(currentQty - diff);
-                productRepository.save(product);
+        // 3. 상태 업데이트 (상태 코드 유효성 검사 후)
+        if (updateDto.getReservationStatus() != null) {
+            ReservationStatus newStatus = ReservationStatus.valueOf(updateDto.getReservationStatus());
+            if (newStatus.toString().equals(reservation.getReservationStatus())) {
+                reservation.setReservationStatus(newStatus.name());
             }
-            reservation.setReservationCnt(newCnt);
         }
 
-        if (updateDto.getReservationDate() != null) reservation.setReservationDate(updateDto.getReservationDate());
-        if (updateDto.getReservationTime() != null) reservation.setReservationTime(updateDto.getReservationTime());
-        if (updateDto.getReservationStatus() != null) reservation.setReservationStatus(updateDto.getReservationStatus());
+        // 4. 수정자 정보 업데이트 (항상 수행)
         reservation.setAmnrId(updateDto.getUserId());
         reservation.setAmndDttm(LocalDateTime.now());
+    }
 
+    // 예약 변경
+    public ReservationDto updateReservation(ReservationUpdateDto dto) {
+        ReservationDto reservation = reservationRepository.findById(dto.getReservationId())
+                .orElseThrow(() -> new ReservationNotFoundException(dto.getReservationId()));
+
+        validateOwnership(reservation, dto.getUserId());
+        validateStatus(reservation, EnumSet.of(ReservationStatus.PENDING, ReservationStatus.CONFIRMED));
+
+        updateReservationDetails(reservation, dto);
+        handleStockChange(reservation, dto.getReservationCnt());
+
+        log.info("예약 수정: {}", reservation);
         return reservationRepository.save(reservation);
     }
 
     // 예약 취소
-    public ReservationDto cancelReservation(ReservationUpdateDto cancelDto) {
-        Optional<ReservationDto> reservationOpt = reservationRepository.findById(cancelDto.getReservationId());
-        if (reservationOpt.isEmpty()) return null;
+    public ReservationDto cancelReservation(ReservationUpdateDto dto) {
+        ReservationDto reservation = reservationRepository.findById(dto.getReservationId())
+                .orElseThrow(() -> new ReservationNotFoundException(dto.getReservationId()));
 
-        ReservationDto reservation = reservationOpt.get();
+        validateOwnership(reservation, dto.getUserId());
+        validateStatus(reservation, EnumSet.of(ReservationStatus.PENDING, ReservationStatus.CONFIRMED));
 
-        // 본인 예약만 취소 가능
-        if (!reservation.getUserId().equals(cancelDto.getUserId())) return null;
+        reservation.setReservationStatus(ReservationStatus.CANCELED.toString());
+        updateProductStock(reservation.getProductId(), reservation.getReservationCnt());
 
-        // 상태 체크
-        ReservationStatus status;
-        try {
-            status = ReservationStatus.valueOf(reservation.getReservationStatus());
-        } catch (Exception e) {
-            return null;
-        }
-        if (!(status == ReservationStatus.PENDING || status == ReservationStatus.CONFIRMED)) return null;
-
-        reservation.setReservationStatus(ReservationStatus.CANCELED.name());
-        reservation.setAmnrId(cancelDto.getUserId());
-        reservation.setAmndDttm(LocalDateTime.now());
-
-        // 상품 수량 복구
-        Optional<ProductDto> productOpt = productRepository.findById(reservation.getProductId());
-        productOpt.ifPresent(product -> {
-            product.setTotalQuantity(product.getTotalQuantity() + reservation.getReservationCnt());
-            productRepository.save(product);
-        });
-
+        log.info("예약 취소: {}", reservation);
         return reservationRepository.save(reservation);
     }
 

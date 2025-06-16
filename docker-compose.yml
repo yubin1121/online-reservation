@@ -1,0 +1,18 @@
+services:
+  mongodb:
+    image: mongo:6.0
+    container_name: mongoALGo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=root1121
+      - MONGO_INITDB_DATABASE=ALGoDB
+    command:
+      - "--auth"
+      - "--bind_ip_all"
+
+volumes:
+  mongo_data:
