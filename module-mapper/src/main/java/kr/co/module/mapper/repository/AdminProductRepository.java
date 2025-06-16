@@ -7,4 +7,5 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface AdminProductRepository extends MongoRepository<ProductDto, String> {
 
+    boolean existsByProductIdAndCrtrId(String productId, String adminId);
 }

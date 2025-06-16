@@ -24,14 +24,12 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class AdminCategoryService {
 
     private final MongoTemplate mongoTemplate;
     private final AdminCategoryRepository adminCategoryRepository;
 
     // 1. 생성
-    @Transactional
     public CategoryDto createCategory(CategoryCreateDto dto) {
         validateDuplicateCategory(dto.getCategoryName());
 
@@ -43,7 +41,6 @@ public class AdminCategoryService {
     }
 
     // 2. 수정
-    @Transactional
     public CategoryDto updateCategory(CategoryUpdateDto dto) {
         return adminCategoryRepository.findById(dto.getCategoryId())
                 .map(category -> {
@@ -54,11 +51,12 @@ public class AdminCategoryService {
     }
 
     // 3. 삭제
-    @Transactional
     public CategoryDto deleteCategory(CategoryUpdateDto dto) {
         return adminCategoryRepository.findById(dto.getCategoryId())
                 .map(category -> {
-                    category.markAsDeleted(dto.getAdminId());
+                    category.setDltYsno("Y");
+                    category.setAmnrId(dto.getAdminId());
+                    category.setAmndDttm(LocalDateTime.now());
                     return adminCategoryRepository.save(category);
                 })
                 .orElseThrow(() -> new CategoryNotFoundException(dto.getCategoryId()));

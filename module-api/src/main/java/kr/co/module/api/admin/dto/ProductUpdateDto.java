@@ -16,7 +16,7 @@ import java.util.Map;
 @AllArgsConstructor
 @Document(collection = "product")
 public class ProductUpdateDto {
-    @Id
+    @NotBlank
     private String productId;
     //카테고리 아이디
     private String categoryId;
