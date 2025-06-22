@@ -54,8 +54,15 @@ public class AdminCategoryServiceTest {
 
         ArgumentCaptor<CategoryDto> captor = ArgumentCaptor.forClass(CategoryDto.class);
 
+        CategoryDto savedDto = new CategoryDto();
+        savedDto.setCategoryName(createDto.getCategoryName());
+        savedDto.setCategoryDesc(createDto.getCategoryDesc());
+        savedDto.setCategoryOrder(createDto.getCategoryOrder());
+        savedDto.setCrtrId(createDto.getAdminId());
+        savedDto.setDltYsno("N");
+
         when(adminCategoryRepository.save(any(CategoryDto.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
+                .thenReturn(savedDto);
 
         CategoryDto result = adminCategoryService.createCategory(createDto);
 

@@ -3,6 +3,7 @@ package kr.co.module.api.user.service;
 import kr.co.module.api.user.dto.ProductSearchDto;
 import kr.co.module.core.dto.domain.ProductDto;
 import kr.co.module.mapper.repository.AdminProductRepository;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,75 +11,73 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class ProductQueryService {
 
     private final MongoTemplate mongoTemplate;
     private final AdminProductRepository adminProductRepository;
 
-    public ProductQueryService(MongoTemplate mongoTemplate, AdminProductRepository adminProductRepository ) {
-        this.mongoTemplate = mongoTemplate;
-        this.adminProductRepository = adminProductRepository;
-    }
-
     public List<ProductDto> searchProducts(ProductSearchDto searchDto) {
         Criteria criteria = new Criteria();
 
-        // 삭제여부(Y 제외)
+        // 1. 기본 조건: 삭제되지 않은 상품
         criteria.and("dltYsno").ne("Y");
 
-        // 관리자 ID
-        if (searchDto.getProductAdminId() != null ) {
+        // 2. 관리자 ID (특정 판매자 상품 검색)
+        if (StringUtils.hasText(searchDto.getProductAdminId())) {
             criteria.and("crtrId").is(searchDto.getProductAdminId());
         }
 
-        // 카테고리 ID
-        if (searchDto.getCategoryId() != null ) {
+        // 3. 카테고리 ID
+        if (StringUtils.hasText(searchDto.getCategoryId())) {
             criteria.and("categoryId").is(searchDto.getCategoryId());
         }
 
-        // 상품명
-        if (searchDto.getProductName() != null && !searchDto.getProductName().isBlank()) {
-            criteria.and("productName").regex(".*" + searchDto.getProductName() + ".*");
+        // 4. 상품명
+        if (StringUtils.hasText(searchDto.getProductName())) {
+            criteria.and("productName").regex(searchDto.getProductName(), "i");
         }
 
-        // 장소
-        if (searchDto.getProductPlace() != null && !searchDto.getProductPlace().isBlank()) {
-            criteria.and("productPlace").regex(".*" + searchDto.getProductPlace() + ".*");
+        // 5. 장소
+        if (StringUtils.hasText(searchDto.getProductPlace())) {
+            criteria.and("productPlace").regex(searchDto.getProductPlace(), "i");
         }
 
-        // 날짜 범위 (productAvlbDateList에 하나라도 포함되면 통과)
+        // 6. 날짜 범위
         if (searchDto.getSrchFromDate() != null || searchDto.getSrchToDate() != null) {
-            Criteria dateCriteria = Criteria.where("productAvlbDateList");
+            Criteria dateCriteria = new Criteria();
             if (searchDto.getSrchFromDate() != null && searchDto.getSrchToDate() != null) {
-                dateCriteria.elemMatch(Criteria.where("$gte").is(searchDto.getSrchFromDate()).andOperator(Criteria.where("$lte").is(searchDto.getSrchToDate())));
+                dateCriteria.andOperator(
+                        Criteria.where("productAvlbDateList").gte(searchDto.getSrchFromDate()),
+                        Criteria.where("productAvlbDateList").lte(searchDto.getSrchToDate())
+                );
             } else if (searchDto.getSrchFromDate() != null) {
-                dateCriteria.elemMatch(Criteria.where("$gte").is(searchDto.getSrchFromDate()));
+                dateCriteria.and("productAvlbDateList").gte(searchDto.getSrchFromDate());
             } else {
-                dateCriteria.elemMatch(Criteria.where("$lte").is(searchDto.getSrchToDate()));
+                dateCriteria.and("productAvlbDateList").lte(searchDto.getSrchToDate());
             }
             criteria.andOperator(dateCriteria);
         }
 
-        // 시간 범위
-        Query query = new Query(criteria);
-        List<ProductDto> result = mongoTemplate.find(query, ProductDto.class);
-
-        // 시간 범위 추가 필터링 (productAvlbTimeSlots가 Map<String, List<String>> 구조라고 가정)
-        if (searchDto.getSrchFromTime() != null || searchDto.getSrchToTime() != null) {
-            result = result.stream().filter(p -> {
-                if (p.getProductAvlbTimeSlots() == null) return false;
-                return p.getProductAvlbTimeSlots().values().stream().flatMap(List::stream).anyMatch(time ->
-                        (searchDto.getSrchFromTime() == null || time.compareTo(searchDto.getSrchFromTime()) >= 0) &&
-                                (searchDto.getSrchToTime() == null || time.compareTo(searchDto.getSrchToTime()) <= 0)
-                );
-            }).toList();
+        // 7. 시간 범위
+        if (StringUtils.hasText(searchDto.getSrchFromTime()) || StringUtils.hasText(searchDto.getSrchToTime())) {
+            criteria.and("productAvlbTimeSlots").elemMatch(
+                    new Criteria().andOperator(
+                            searchDto.getSrchFromTime() != null ?
+                                    Criteria.where("value").gte(searchDto.getSrchFromTime()) : new Criteria(),
+                            searchDto.getSrchToTime() != null ?
+                                    Criteria.where("value").lte(searchDto.getSrchToTime()) : new Criteria()
+                    )
+            );
         }
 
-        return result;
+        Query query = new Query(criteria);
+        return mongoTemplate.find(query, ProductDto.class);
     }
 }

@@ -37,11 +37,6 @@ public class CategoryDto {
 
     private String dltYsno;
 
-    public void markAsDeleted(String adminId) {
-        this.dltYsno = "Y";
-        this.amnrId = adminId;
-        this.amndDttm = LocalDateTime.now();
-    }
 }
 
 

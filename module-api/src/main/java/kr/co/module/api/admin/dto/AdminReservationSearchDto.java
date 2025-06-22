@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -16,4 +18,8 @@ public class AdminReservationSearchDto {
     private String productId;
 
     private String categoryId;
+
+    private String reservationStatus;
+    private LocalDateTime fromDate;
+    private LocalDateTime toDate;
 }
