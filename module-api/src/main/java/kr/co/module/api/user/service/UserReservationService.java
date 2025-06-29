@@ -1,4 +1,5 @@
 package kr.co.module.api.user.service;
+import com.mongodb.client.result.UpdateResult;
 import kr.co.module.api.admin.dto.CategoryCreateDto;
 import kr.co.module.api.user.dto.ReservationRequestDto;
 import kr.co.module.api.user.dto.ReservationSearchDto;
@@ -20,6 +21,7 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -66,9 +68,22 @@ public class UserReservationService {
     }
 
     private void updateProductStock(String productId, int quantityDelta) {
-        Query query = new Query(Criteria.where("_id").is(productId));
+        //Query query = new Query(Criteria.where("_id").is(productId));
+        //Update update = new Update().inc("totalQuantity", quantityDelta);
+        //mongoTemplate.updateFirst(query, update, ProductDto.class);
+        // 재고 0 이상일 경우 업데이트 가능.
+        Query query = new Query(
+                Criteria.where("_id").is(productId)
+                        .and("totalQuantity").gte(Math.abs(quantityDelta))
+        );
         Update update = new Update().inc("totalQuantity", quantityDelta);
-        mongoTemplate.updateFirst(query, update, ProductDto.class);
+        UpdateResult result = mongoTemplate.updateFirst(query, update, ProductDto.class);
+
+        if (result.getModifiedCount() == 0) {
+            throw new InsufficientStockException(
+                    "재고 부족: 요청 " + result.getModifiedCount() + "/현재 " + quantityDelta
+            );
+        }
     }
 
     private ReservationDto buildReservation(ReservationRequestDto dto) {
@@ -85,6 +100,7 @@ public class UserReservationService {
     }
 
     // 예약 신청
+    @Transactional
     public ReservationDto reserve(ReservationRequestDto request) {
         ProductDto product = productRepository.findById(request.getProductId())
                 .orElseThrow(() -> new ProductNotFoundException(request.getProductId()));
