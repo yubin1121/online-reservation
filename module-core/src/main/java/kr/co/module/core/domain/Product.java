@@ -1,4 +1,4 @@
-package kr.co.module.core.dto.domain;
+package kr.co.module.core.domain;
 
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
@@ -15,7 +15,7 @@ import java.util.Map;
 @NoArgsConstructor
 @AllArgsConstructor
 @Document(collection = "product")
-public class ProductDto {
+public class Product {
     //상품 아이디
     @Id
     private String productId;

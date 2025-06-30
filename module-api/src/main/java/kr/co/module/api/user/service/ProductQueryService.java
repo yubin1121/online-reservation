@@ -1,12 +1,10 @@
 package kr.co.module.api.user.service;
 
 import kr.co.module.api.user.dto.ProductSearchDto;
-import kr.co.module.core.dto.domain.ProductDto;
+import kr.co.module.core.domain.Product;
 import kr.co.module.mapper.repository.AdminProductRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -23,7 +21,7 @@ public class ProductQueryService {
     private final MongoTemplate mongoTemplate;
     private final AdminProductRepository adminProductRepository;
 
-    public List<ProductDto> searchProducts(ProductSearchDto searchDto) {
+    public List<Product> searchProducts(ProductSearchDto searchDto) {
         Criteria criteria = new Criteria();
 
         // 1. 기본 조건: 삭제되지 않은 상품
@@ -78,6 +76,6 @@ public class ProductQueryService {
         }
 
         Query query = new Query(criteria);
-        return mongoTemplate.find(query, ProductDto.class);
+        return mongoTemplate.find(query, Product.class);
     }
 }

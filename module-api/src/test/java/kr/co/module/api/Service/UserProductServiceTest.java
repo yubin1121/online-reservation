@@ -1,7 +1,7 @@
 package kr.co.module.api.Service;
 import kr.co.module.api.user.dto.ProductSearchDto;
 import kr.co.module.api.user.service.ProductQueryService;
-import kr.co.module.core.dto.domain.ProductDto;
+import kr.co.module.core.domain.Product;
 import kr.co.module.mapper.repository.AdminProductRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,11 +32,11 @@ public class UserProductServiceTest {
     @InjectMocks
     private ProductQueryService productQueryService;
 
-    private ProductDto product;
+    private Product product;
 
     @BeforeEach
     void setup() {
-        product = ProductDto.builder()
+        product = Product.builder()
                 .productId("p1")
                 .categoryId("c1")
                 .productName("테스트상품")
@@ -50,18 +50,18 @@ public class UserProductServiceTest {
         // given
         ProductSearchDto searchDto = new ProductSearchDto();
 
-        when(mongoTemplate.find(any(Query.class), eq(ProductDto.class)))
+        when(mongoTemplate.find(any(Query.class), eq(Product.class)))
                 .thenReturn(Collections.singletonList(product));
 
         // when
-        List<ProductDto> result = productQueryService.searchProducts(searchDto);
+        List<Product> result = productQueryService.searchProducts(searchDto);
 
         // then
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getProductId()).isEqualTo("p1");
 
         ArgumentCaptor<Query> queryCaptor = ArgumentCaptor.forClass(Query.class);
-        verify(mongoTemplate).find(queryCaptor.capture(), eq(ProductDto.class));
+        verify(mongoTemplate).find(queryCaptor.capture(), eq(Product.class));
         String queryString = queryCaptor.getValue().toString();
         assertThat(queryString).contains("dltYsno");
     }
@@ -75,17 +75,17 @@ public class UserProductServiceTest {
         searchDto.setProductName("테스트");
         searchDto.setProductPlace("서울");
 
-        when(mongoTemplate.find(any(Query.class), eq(ProductDto.class)))
+        when(mongoTemplate.find(any(Query.class), eq(Product.class)))
                 .thenReturn(List.of(product));
 
         // when
-        List<ProductDto> result = productQueryService.searchProducts(searchDto);
+        List<Product> result = productQueryService.searchProducts(searchDto);
 
         // then
         assertThat(result).hasSize(1);
 
         ArgumentCaptor<Query> queryCaptor = ArgumentCaptor.forClass(Query.class);
-        verify(mongoTemplate).find(queryCaptor.capture(), eq(ProductDto.class));
+        verify(mongoTemplate).find(queryCaptor.capture(), eq(Product.class));
         String queryString = queryCaptor.getValue().toString();
         assertThat(queryString).contains("crtrId");
         assertThat(queryString).contains("categoryId");
@@ -100,17 +100,17 @@ public class UserProductServiceTest {
         searchDto.setSrchFromDate("2024-06-01");
         searchDto.setSrchToDate("2024-06-30");
 
-        when(mongoTemplate.find(any(Query.class), eq(ProductDto.class)))
+        when(mongoTemplate.find(any(Query.class), eq(Product.class)))
                 .thenReturn(List.of(product));
 
         // when
-        List<ProductDto> result = productQueryService.searchProducts(searchDto);
+        List<Product> result = productQueryService.searchProducts(searchDto);
 
         // then
         assertThat(result).hasSize(1);
 
         ArgumentCaptor<Query> queryCaptor = ArgumentCaptor.forClass(Query.class);
-        verify(mongoTemplate).find(queryCaptor.capture(), eq(ProductDto.class));
+        verify(mongoTemplate).find(queryCaptor.capture(), eq(Product.class));
         String queryString = queryCaptor.getValue().toString();
         assertThat(queryString).contains("productAvlbDateList");
         assertThat(queryString).contains("$gte");
@@ -124,17 +124,17 @@ public class UserProductServiceTest {
         searchDto.setSrchFromTime("09:00");
         searchDto.setSrchToTime("18:00");
 
-        when(mongoTemplate.find(any(Query.class), eq(ProductDto.class)))
+        when(mongoTemplate.find(any(Query.class), eq(Product.class)))
                 .thenReturn(List.of(product));
 
         // when
-        List<ProductDto> result = productQueryService.searchProducts(searchDto);
+        List<Product> result = productQueryService.searchProducts(searchDto);
 
         // then
         assertThat(result).hasSize(1);
 
         ArgumentCaptor<Query> queryCaptor = ArgumentCaptor.forClass(Query.class);
-        verify(mongoTemplate).find(queryCaptor.capture(), eq(ProductDto.class));
+        verify(mongoTemplate).find(queryCaptor.capture(), eq(Product.class));
         String queryString = queryCaptor.getValue().toString();
         assertThat(queryString).contains("productAvlbTimeSlots");
         assertThat(queryString).contains("$gte");
@@ -147,11 +147,11 @@ public class UserProductServiceTest {
         ProductSearchDto searchDto = new ProductSearchDto();
         searchDto.setProductName("없는상품");
 
-        when(mongoTemplate.find(any(Query.class), eq(ProductDto.class)))
+        when(mongoTemplate.find(any(Query.class), eq(Product.class)))
                 .thenReturn(Collections.emptyList());
 
         // when
-        List<ProductDto> result = productQueryService.searchProducts(searchDto);
+        List<Product> result = productQueryService.searchProducts(searchDto);
 
         // then
         assertThat(result).isEmpty();

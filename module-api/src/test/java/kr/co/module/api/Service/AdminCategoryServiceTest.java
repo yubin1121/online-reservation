@@ -2,11 +2,10 @@ package kr.co.module.api.Service;
 
 import kr.co.module.api.admin.dto.*;
 import kr.co.module.api.admin.service.AdminCategoryService;
-import kr.co.module.core.dto.domain.CategoryDto;
+import kr.co.module.core.domain.Category;
 import kr.co.module.mapper.repository.AdminCategoryRepository;
 import org.bson.Document;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -52,22 +51,22 @@ public class AdminCategoryServiceTest {
         createDto.setCategoryOrder(1);
         createDto.setAdminId("admin1");
 
-        ArgumentCaptor<CategoryDto> captor = ArgumentCaptor.forClass(CategoryDto.class);
+        ArgumentCaptor<Category> captor = ArgumentCaptor.forClass(Category.class);
 
-        CategoryDto savedDto = new CategoryDto();
+        Category savedDto = new Category();
         savedDto.setCategoryName(createDto.getCategoryName());
         savedDto.setCategoryDesc(createDto.getCategoryDesc());
         savedDto.setCategoryOrder(createDto.getCategoryOrder());
         savedDto.setCrtrId(createDto.getAdminId());
         savedDto.setDltYsno("N");
 
-        when(adminCategoryRepository.save(any(CategoryDto.class)))
+        when(adminCategoryRepository.save(any(Category.class)))
                 .thenReturn(savedDto);
 
-        CategoryDto result = adminCategoryService.createCategory(createDto);
+        Category result = adminCategoryService.createCategory(createDto);
 
         verify(adminCategoryRepository, times(1)).save(captor.capture());
-        CategoryDto saved = captor.getValue();
+        Category saved = captor.getValue();
         assertEquals("카테고리1", saved.getCategoryName());
         assertEquals("설명", saved.getCategoryDesc());
         assertEquals(1, saved.getCategoryOrder());
@@ -85,7 +84,7 @@ public class AdminCategoryServiceTest {
         updateDto.setCategoryOrder(2);
         updateDto.setAdminId("admin2");
 
-        CategoryDto origin = CategoryDto.builder()
+        Category origin = Category.builder()
                 .categoryId("100")
                 .categoryName("카테고리1")
                 .categoryDesc("기존 설명")
@@ -95,10 +94,10 @@ public class AdminCategoryServiceTest {
                 .build();
 
         when(adminCategoryRepository.findById("100")).thenReturn(Optional.of(origin));
-        when(adminCategoryRepository.save(any(CategoryDto.class))).thenReturn(origin);
+        when(adminCategoryRepository.save(any(Category.class))).thenReturn(origin);
 
         // when
-        CategoryDto result = adminCategoryService.updateCategory(updateDto);
+        Category result = adminCategoryService.updateCategory(updateDto);
 
         // then
         assertNotNull(result);
@@ -117,7 +116,7 @@ public class AdminCategoryServiceTest {
         when(adminCategoryRepository.findById("999")).thenReturn(Optional.empty());
 
         // when
-        CategoryDto result = adminCategoryService.updateCategory(updateDto);
+        Category result = adminCategoryService.updateCategory(updateDto);
 
         // then
         assertNull(result);
@@ -131,17 +130,17 @@ public class AdminCategoryServiceTest {
         updateDto.setCategoryId("200");
         updateDto.setAdminId("admin3");
 
-        CategoryDto origin = CategoryDto.builder()
+        Category origin = Category.builder()
                 .categoryId("200")
                 .categoryName("카테고리2")
                 .dltYsno("N")
                 .build();
 
         when(adminCategoryRepository.findById("200")).thenReturn(Optional.of(origin));
-        when(adminCategoryRepository.save(any(CategoryDto.class))).thenReturn(origin);
+        when(adminCategoryRepository.save(any(Category.class))).thenReturn(origin);
 
         // when
-        CategoryDto result = adminCategoryService.deleteCategory(updateDto);
+        Category result = adminCategoryService.deleteCategory(updateDto);
 
         // then
         assertNotNull(result);
@@ -159,7 +158,7 @@ public class AdminCategoryServiceTest {
         when(adminCategoryRepository.findById("888")).thenReturn(Optional.empty());
 
         // when
-        CategoryDto result = adminCategoryService.deleteCategory(updateDto);
+        Category result = adminCategoryService.deleteCategory(updateDto);
 
         // then
         assertNull(result);
@@ -174,7 +173,7 @@ public class AdminCategoryServiceTest {
         searchDto.setCategoryOrder(3);
         searchDto.setAdminId("admin4");
 
-        CategoryDto c1 = CategoryDto.builder()
+        Category c1 = Category.builder()
                 .categoryId("100")
                 .categoryName("테스트카테고리")
                 .categoryOrder(3)
@@ -183,11 +182,11 @@ public class AdminCategoryServiceTest {
                 .build();
         Pageable pageable = PageRequest.of(0, 10);
 
-        when(mongoTemplate.find(any(Query.class), eq(CategoryDto.class)))
+        when(mongoTemplate.find(any(Query.class), eq(Category.class)))
                 .thenReturn(Collections.singletonList(c1));
 
         // when
-        Page<CategoryDto> result = adminCategoryService.searchCategories(searchDto, pageable);
+        Page<Category> result = adminCategoryService.searchCategories(searchDto, pageable);
 
         // then
         assertNotNull(result);
@@ -195,7 +194,7 @@ public class AdminCategoryServiceTest {
         assertEquals("테스트카테고리", result.getContent().get(0).getCategoryName());
 
         ArgumentCaptor<Query> queryCaptor = ArgumentCaptor.forClass(Query.class);
-        verify(mongoTemplate).find(queryCaptor.capture(), eq(CategoryDto.class));
+        verify(mongoTemplate).find(queryCaptor.capture(), eq(Category.class));
         Query usedQuery = queryCaptor.getValue();
 
         Document queryDoc = usedQuery.getQueryObject();

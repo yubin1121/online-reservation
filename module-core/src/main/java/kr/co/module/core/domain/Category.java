@@ -1,4 +1,4 @@
-package kr.co.module.core.dto.domain;
+package kr.co.module.core.domain;
 
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Document(collection = "category")
-public class CategoryDto {
+public class Category {
     //카테고리 id
     @Id
     private String categoryId;

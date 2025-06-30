@@ -1,7 +1,7 @@
 package kr.co.module.api.Service;
 import kr.co.module.api.admin.dto.*;
 import kr.co.module.api.admin.service.AdminProductService;
-import kr.co.module.core.dto.domain.ProductDto;
+import kr.co.module.core.domain.Product;
 import kr.co.module.mapper.repository.AdminProductRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -9,7 +9,6 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Query;
 
-import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -35,17 +34,17 @@ public class AdminProductServiceTest {
         AdminProductSearchDto searchDto = new AdminProductSearchDto();
         searchDto.setAdminId("admin1");
 
-        ProductDto p1 = ProductDto.builder()
+        Product p1 = Product.builder()
                 .productId("1")
                 .productName("상품1")
                 .crtrId("admin1")
                 .build();
 
-        when(mongoTemplate.find(any(Query.class), eq(ProductDto.class)))
+        when(mongoTemplate.find(any(Query.class), eq(Product.class)))
                 .thenReturn(Arrays.asList(p1));
 
         // when
-        List<ProductDto> result = adminProductService.searchMyProducts(searchDto);
+        List<Product> result = adminProductService.searchMyProducts(searchDto);
 
         // then
         assertNotNull(result);
@@ -53,7 +52,7 @@ public class AdminProductServiceTest {
         assertEquals("상품1", result.get(0).getProductName());
 
         ArgumentCaptor<Query> queryCaptor = ArgumentCaptor.forClass(Query.class);
-        verify(mongoTemplate).find(queryCaptor.capture(), eq(ProductDto.class));
+        verify(mongoTemplate).find(queryCaptor.capture(), eq(Product.class));
         Query usedQuery = queryCaptor.getValue();
         assertTrue(usedQuery.toString().contains("adminId"));
     }
@@ -70,14 +69,14 @@ public class AdminProductServiceTest {
         createDto.setAdminId("admin2");
         createDto.setTotalQuantity(100);
 
-        ArgumentCaptor<ProductDto> captor = ArgumentCaptor.forClass(ProductDto.class);
+        ArgumentCaptor<Product> captor = ArgumentCaptor.forClass(Product.class);
 
         // when
-        ProductDto result = adminProductService.createProduct(createDto);
+        Product result = adminProductService.createProduct(createDto);
 
         // then
         verify(adminProductRepository, times(1)).save(captor.capture());
-        ProductDto saved = captor.getValue();
+        Product saved = captor.getValue();
         assertEquals("신상품", saved.getProductName());
         assertEquals("admin2", saved.getCrtrId());
         assertEquals("N", saved.getDltYsno());
@@ -92,7 +91,7 @@ public class AdminProductServiceTest {
         updateDto.setProductName("수정상품");
         updateDto.setAdminId("admin3");
 
-        ProductDto origin = ProductDto.builder()
+        Product origin = Product.builder()
                 .productId("100")
                 .productName("기존상품")
                 .crtrId("admin3")
@@ -100,10 +99,10 @@ public class AdminProductServiceTest {
                 .build();
 
         when(adminProductRepository.findById("100")).thenReturn(Optional.of(origin));
-        when(adminProductRepository.save(any(ProductDto.class))).thenReturn(origin);
+        when(adminProductRepository.save(any(Product.class))).thenReturn(origin);
 
         // when
-        ProductDto result = adminProductService.updateProduct(updateDto);
+        Product result = adminProductService.updateProduct(updateDto);
 
         // then
         assertNotNull(result);
@@ -121,7 +120,7 @@ public class AdminProductServiceTest {
         updateDto.setProductName("수정상품");
         updateDto.setAdminId("adminX");
 
-        ProductDto origin = ProductDto.builder()
+        Product origin = Product.builder()
                 .productId("200")
                 .productName("기존상품")
                 .crtrId("adminY")
@@ -131,7 +130,7 @@ public class AdminProductServiceTest {
         when(adminProductRepository.findById("200")).thenReturn(Optional.of(origin));
 
         // when
-        ProductDto result = adminProductService.updateProduct(updateDto);
+        Product result = adminProductService.updateProduct(updateDto);
 
         // then
         assertNull(result);
@@ -145,7 +144,7 @@ public class AdminProductServiceTest {
         updateDto.setProductId("300");
         updateDto.setAdminId("admin4");
 
-        ProductDto origin = ProductDto.builder()
+        Product origin = Product.builder()
                 .productId("300")
                 .productName("상품삭제")
                 .crtrId("admin4")
@@ -153,10 +152,10 @@ public class AdminProductServiceTest {
                 .build();
 
         when(adminProductRepository.findById("300")).thenReturn(Optional.of(origin));
-        when(adminProductRepository.save(any(ProductDto.class))).thenReturn(origin);
+        when(adminProductRepository.save(any(Product.class))).thenReturn(origin);
 
         // when
-        ProductDto result = adminProductService.deleteProduct(updateDto);
+        Product result = adminProductService.deleteProduct(updateDto);
 
         // then
         assertNotNull(result);
@@ -172,7 +171,7 @@ public class AdminProductServiceTest {
         updateDto.setProductId("400");
         updateDto.setAdminId("adminX");
 
-        ProductDto origin = ProductDto.builder()
+        Product origin = Product.builder()
                 .productId("400")
                 .productName("상품삭제")
                 .crtrId("adminY")
@@ -182,7 +181,7 @@ public class AdminProductServiceTest {
         when(adminProductRepository.findById("400")).thenReturn(Optional.of(origin));
 
         // when
-        ProductDto result = adminProductService.deleteProduct(updateDto);
+        Product result = adminProductService.deleteProduct(updateDto);
 
         // then
         assertNull(result);

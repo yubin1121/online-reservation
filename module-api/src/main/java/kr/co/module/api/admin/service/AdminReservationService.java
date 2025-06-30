@@ -1,13 +1,13 @@
 package kr.co.module.api.admin.service;
 import kr.co.module.api.admin.dto.*;
-import kr.co.module.core.dto.domain.*;
+import kr.co.module.core.domain.Product;
+import kr.co.module.core.domain.Reservation;
 import kr.co.module.core.exception.ReservationNotFoundException;
 import kr.co.module.core.exception.UnauthorizedAccessException;
 import kr.co.module.mapper.repository.AdminProductRepository;
 import kr.co.module.mapper.repository.AdminReservationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -30,8 +30,8 @@ public class AdminReservationService {
     private final AdminProductRepository adminProductRepository;
 
     // 예약 상태 변경
-    public ReservationDto updateReservationStatus(AdminReservationUpdateDto dto) {
-        ReservationDto reservation = adminReservationRepository.findById(dto.getReservationId())
+    public Reservation updateReservationStatus(AdminReservationUpdateDto dto) {
+        Reservation reservation = adminReservationRepository.findById(dto.getReservationId())
                 .orElseThrow(() -> new ReservationNotFoundException(dto.getReservationId()));
 
         // 본인 상품의 예약인지 확인
@@ -55,7 +55,7 @@ public class AdminReservationService {
 
 
     // 2. 예약 검색
-    public List<ReservationDto> searchAdminReservations(AdminReservationSearchDto searchDto) {
+    public List<Reservation> searchAdminReservations(AdminReservationSearchDto searchDto) {
         // 본인 상품 ID 목록 조회
         List<String> productIds = getMyProductIds(searchDto);
 
@@ -89,14 +89,14 @@ public class AdminReservationService {
             }
         }
 
-        List<ProductDto> products = mongoTemplate.find(new Query(criteria), ProductDto.class);
+        List<Product> products = mongoTemplate.find(new Query(criteria), Product.class);
         // 상품이 없으면 바로 빈 리스트 반환
         if (products.isEmpty()) {
             return Collections.emptyList();
         }
         Query reservationQuery = new Query(Criteria.where("productId").in(productIds));
 
-        return mongoTemplate.find(reservationQuery, ReservationDto.class);
+        return mongoTemplate.find(reservationQuery, Reservation.class);
 
     }
 
@@ -111,9 +111,9 @@ public class AdminReservationService {
             productCriteria.and("categoryId").is(searchDto.getCategoryId());
         }
 
-        return mongoTemplate.find(new Query(productCriteria), ProductDto.class)
+        return mongoTemplate.find(new Query(productCriteria), Product.class)
                 .stream()
-                .map(ProductDto::getProductId)
+                .map(Product::getProductId)
                 .collect(Collectors.toList());
     }
 

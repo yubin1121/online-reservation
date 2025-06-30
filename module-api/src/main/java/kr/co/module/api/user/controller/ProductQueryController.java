@@ -2,13 +2,11 @@ package kr.co.module.api.user.controller;
 import kr.co.module.api.user.dto.ProductSearchDto;
 import kr.co.module.api.user.service.ProductQueryService;
 import kr.co.module.core.code.ErrorCode;
-import kr.co.module.core.dto.domain.ProductDto;
+import kr.co.module.core.domain.Product;
 import kr.co.module.core.response.ApiResponse;
 import kr.co.module.core.response.ErrorResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -39,7 +37,7 @@ public class ProductQueryController {
                     new ErrorResponse(ErrorCode.PRODUCT_REQUIRED_CONDITION.message(), ErrorCode.PRODUCT_REQUIRED_CONDITION.code(), null)
             );
         }
-        List<ProductDto> result = productQueryService.searchProducts(searchDto);
+        List<Product> result = productQueryService.searchProducts(searchDto);
         return ResponseEntity.ok(new ApiResponse<>(true, result, "상품 조회 성공", null));
     }
 
