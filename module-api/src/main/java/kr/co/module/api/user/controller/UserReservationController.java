@@ -5,7 +5,7 @@ import kr.co.module.api.user.dto.ReservationRequestDto;
 import kr.co.module.api.user.dto.ReservationSearchDto;
 import kr.co.module.api.user.dto.ReservationUpdateDto;
 import kr.co.module.api.user.service.UserReservationService;
-import kr.co.module.core.dto.domain.ReservationDto;
+import kr.co.module.core.domain.Reservation;
 import kr.co.module.core.response.ApiResponse;
 import kr.co.module.core.response.ErrorResponse;
 import kr.co.module.core.code.ErrorCode;
@@ -24,7 +24,7 @@ public class UserReservationController {
     // 예약 신청
     @PostMapping("request")
     public ResponseEntity<?> reserve(@Valid @RequestBody ReservationRequestDto requestDto) {
-        ReservationDto result = userReservationService.reserve(requestDto);
+        Reservation result = userReservationService.reserve(requestDto);
         if (result != null) {
             return ResponseEntity.ok(new ApiResponse<>(true, null, "예약 신청 성공", null));
         } else {
@@ -37,7 +37,7 @@ public class UserReservationController {
     // 예약 변경
     @PutMapping("modify")
     public ResponseEntity<?> updateReservation(@Valid @RequestBody ReservationUpdateDto updateDto) {
-        ReservationDto result = userReservationService.updateReservation(updateDto);
+        Reservation result = userReservationService.updateReservation(updateDto);
         if (result != null) {
             return ResponseEntity.ok(new ApiResponse<>(true, null, "예약 변경 성공", null));
         } else {
@@ -50,7 +50,7 @@ public class UserReservationController {
     // 예약 취소
     @PostMapping("cancel")
     public ResponseEntity<?> cancelReservation(@Valid @RequestBody ReservationUpdateDto cancelDto) {
-        ReservationDto result = userReservationService.cancelReservation(cancelDto);
+        Reservation result = userReservationService.cancelReservation(cancelDto);
         if (result != null) {
             return ResponseEntity.ok(new ApiResponse<>(true, null, "예약 취소 성공", null));
         } else {
@@ -61,10 +61,10 @@ public class UserReservationController {
     }
 
     @GetMapping("search")
-    public ResponseEntity<ApiResponse<List<ReservationDto>>> searchUserReservations(
+    public ResponseEntity<ApiResponse<List<Reservation>>> searchUserReservations(
             @Valid @ModelAttribute ReservationSearchDto searchDto
     ) {
-        List<ReservationDto> result = userReservationService.searchUserReservations(searchDto);
+        List<Reservation> result = userReservationService.searchUserReservations(searchDto);
         return ResponseEntity.ok(new ApiResponse<>(true, result, "예약 정보 조회 성공", null));
     }
 }

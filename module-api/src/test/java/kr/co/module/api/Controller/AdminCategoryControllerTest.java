@@ -1,11 +1,6 @@
 package kr.co.module.api.Controller;
 
 import kr.co.module.api.admin.dto.CategoryCreateDto;
-import kr.co.module.api.admin.dto.CategoryUpdateDto;
-import kr.co.module.core.dto.domain.CategoryDto;
-import kr.co.module.core.response.ApiResponse;
-import kr.co.module.mapper.repository.AdminCategoryRepository;
-import kr.co.module.mapper.repository.AdminProductRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;

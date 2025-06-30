@@ -1,12 +1,10 @@
 package kr.co.module.api.user.service;
 import com.mongodb.client.result.UpdateResult;
-import kr.co.module.api.admin.dto.CategoryCreateDto;
 import kr.co.module.api.user.dto.ReservationRequestDto;
 import kr.co.module.api.user.dto.ReservationSearchDto;
 import kr.co.module.api.user.dto.ReservationUpdateDto;
-import kr.co.module.core.dto.domain.CategoryDto;
-import kr.co.module.core.dto.domain.ReservationDto;
-import kr.co.module.core.dto.domain.ProductDto;
+import kr.co.module.core.domain.Reservation;
+import kr.co.module.core.domain.Product;
 import kr.co.module.core.exception.InsufficientStockException;
 import kr.co.module.core.exception.ProductNotFoundException;
 import kr.co.module.core.exception.ReservationNotFoundException;
@@ -15,7 +13,6 @@ import kr.co.module.mapper.repository.AdminProductRepository;
 import kr.co.module.mapper.repository.UserReservationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -35,7 +32,7 @@ public class UserReservationService {
     private final UserReservationRepository reservationRepository;
     private final MongoTemplate mongoTemplate;
 
-    private void validateReservation(ProductDto product, int count) {
+    private void validateReservation(Product product, int count) {
         if ("Y".equals(product.getDltYsno())) {
             throw new IllegalStateException("삭제된 상품입니다");
         }
@@ -46,20 +43,20 @@ public class UserReservationService {
         }
     }
 
-    private void validateOwnership(ReservationDto reservation, String userId) {
+    private void validateOwnership(Reservation reservation, String userId) {
         if (!reservation.getUserId().equals(userId)) {
             throw new SecurityException("예약 소유자가 아닙니다");
         }
     }
 
-    private void validateStatus(ReservationDto reservation, EnumSet<ReservationStatus> allowed) {
+    private void validateStatus(Reservation reservation, EnumSet<ReservationStatus> allowed) {
         ReservationStatus status = ReservationStatus.valueOf(reservation.getReservationStatus());
         if (!allowed.contains(status)) {
             throw new IllegalStateException("허용되지 않은 상태: " + status);
         }
     }
 
-    private void handleStockChange(ReservationDto reservation, Integer newCount) {
+    private void handleStockChange(Reservation reservation, Integer newCount) {
         if (newCount != null && !newCount.equals(reservation.getReservationCnt())) {
             int delta = newCount - reservation.getReservationCnt();
             updateProductStock(reservation.getProductId(), -delta);
@@ -77,7 +74,7 @@ public class UserReservationService {
                         .and("totalQuantity").gte(Math.abs(quantityDelta))
         );
         Update update = new Update().inc("totalQuantity", quantityDelta);
-        UpdateResult result = mongoTemplate.updateFirst(query, update, ProductDto.class);
+        UpdateResult result = mongoTemplate.updateFirst(query, update, Product.class);
 
         if (result.getModifiedCount() == 0) {
             throw new InsufficientStockException(
@@ -86,8 +83,8 @@ public class UserReservationService {
         }
     }
 
-    private ReservationDto buildReservation(ReservationRequestDto dto) {
-        return ReservationDto.builder()
+    private Reservation buildReservation(ReservationRequestDto dto) {
+        return Reservation.builder()
                 .reservationId(dto.getProductId()+dto.getUserId()+dto.getReservationDate()+dto.getReservationTime())
                 .reservationStatus("PENDING")
                 .reservationTime(dto.getReservationTime())
@@ -99,7 +96,7 @@ public class UserReservationService {
                 .build();
     }
 
-    private void validateStock(ProductDto product, int required) {
+    private void validateStock(Product product, int required) {
         log.debug("재고 업데이트: productId={}, quantity={}, required={}",
                 product.getProductId(), product.getTotalQuantity(), required);
         if (product.getTotalQuantity() < required) {
@@ -111,14 +108,14 @@ public class UserReservationService {
 
     // 예약 신청
     @Transactional
-    public ReservationDto reserve(ReservationRequestDto request) {
-        ProductDto product = productRepository.findById(request.getProductId())
+    public Reservation reserve(ReservationRequestDto request) {
+        Product product = productRepository.findById(request.getProductId())
                 .orElseThrow(() -> new ProductNotFoundException(request.getProductId()));
 
         validateStock(product, request.getReservationCnt());
         validateReservation(product, request.getReservationCnt());
 
-        ReservationDto reservation = buildReservation(request);
+        Reservation reservation = buildReservation(request);
         reservationRepository.save(reservation);
 
         updateProductStock(product.getProductId(), -request.getReservationCnt());
@@ -126,7 +123,7 @@ public class UserReservationService {
         return reservation;
     }
 
-    private void updateReservationDetails(ReservationDto reservation, ReservationUpdateDto updateDto) {
+    private void updateReservationDetails(Reservation reservation, ReservationUpdateDto updateDto) {
         // 1. 날짜 업데이트
         if (updateDto.getReservationDate() != null) {
             reservation.setReservationDate(updateDto.getReservationDate());
@@ -151,8 +148,8 @@ public class UserReservationService {
     }
 
     // 예약 변경
-    public ReservationDto updateReservation(ReservationUpdateDto dto) {
-        ReservationDto reservation = reservationRepository.findById(dto.getReservationId())
+    public Reservation updateReservation(ReservationUpdateDto dto) {
+        Reservation reservation = reservationRepository.findById(dto.getReservationId())
                 .orElseThrow(() -> new ReservationNotFoundException(dto.getReservationId()));
 
         validateOwnership(reservation, dto.getUserId());
@@ -166,8 +163,8 @@ public class UserReservationService {
     }
 
     // 예약 취소
-    public ReservationDto cancelReservation(ReservationUpdateDto dto) {
-        ReservationDto reservation = reservationRepository.findById(dto.getReservationId())
+    public Reservation cancelReservation(ReservationUpdateDto dto) {
+        Reservation reservation = reservationRepository.findById(dto.getReservationId())
                 .orElseThrow(() -> new ReservationNotFoundException(dto.getReservationId()));
 
         validateOwnership(reservation, dto.getUserId());
@@ -181,18 +178,18 @@ public class UserReservationService {
     }
 
     // 사용자 예약 목록 검색
-    public List<ReservationDto> searchUserReservations(ReservationSearchDto searchDto) {
+    public List<Reservation> searchUserReservations(ReservationSearchDto searchDto) {
         Criteria criteria = Criteria.where("userId").is(searchDto.getUserId());
 
         // 카테고리 ID로 필터링 (Product 컬렉션 조인 불가, DB에서 먼저 예약 조회 후 Java에서 필터링)
         Query query = new Query(criteria);
-        List<ReservationDto> reservations = mongoTemplate.find(query, ReservationDto.class);
+        List<Reservation> reservations = mongoTemplate.find(query, Reservation.class);
 
         // 카테고리 ID 필터 (ProductDto를 조회해서 매칭)
         if (searchDto.getCategoryId() != null) {
             reservations = reservations.stream()
                     .filter(r -> {
-                        Optional<ProductDto> productOpt = productRepository.findById(r.getProductId());
+                        Optional<Product> productOpt = productRepository.findById(r.getProductId());
                         return productOpt.isPresent() &&
                                 searchDto.getCategoryId().equals(productOpt.get().getCategoryId());
                     })

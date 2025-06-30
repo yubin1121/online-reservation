@@ -4,8 +4,8 @@ import kr.co.module.api.user.dto.ReservationRequestDto;
 import kr.co.module.api.user.dto.ReservationSearchDto;
 import kr.co.module.api.user.dto.ReservationUpdateDto;
 import kr.co.module.api.user.service.UserReservationService;
-import kr.co.module.core.dto.domain.ProductDto;
-import kr.co.module.core.dto.domain.ReservationDto;
+import kr.co.module.core.domain.Product;
+import kr.co.module.core.domain.Reservation;
 import kr.co.module.core.exception.InsufficientStockException;
 import kr.co.module.core.exception.ProductNotFoundException;
 import kr.co.module.core.status.ReservationStatus;
@@ -40,21 +40,21 @@ public class UserReservationServiceTest {
     @InjectMocks
     private UserReservationService reservationService;
 
-    private ProductDto testProduct;
-    private ReservationDto testReservation;
+    private Product testProduct;
+    private Reservation testReservation;
     private final String USER_ID = "user123";
     private final String PRODUCT_ID = "prod456";
     private final String RESERVATION_ID = "resv789";
 
     @BeforeEach
     void setUp() {
-        testProduct = ProductDto.builder()
+        testProduct = Product.builder()
                 .productId(PRODUCT_ID)
                 .totalQuantity(10)
                 .dltYsno("N")
                 .build();
 
-        testReservation = ReservationDto.builder()
+        testReservation = Reservation.builder()
                 .reservationId(RESERVATION_ID)
                 .userId(USER_ID)
                 .productId(PRODUCT_ID)
@@ -75,7 +75,7 @@ public class UserReservationServiceTest {
         when(reservationRepository.save(any())).thenReturn(testReservation);
 
         // When
-        ReservationDto result = reservationService.reserve(request);
+        Reservation result = reservationService.reserve(request);
 
         // Then
         assertNotNull(result);
@@ -116,7 +116,7 @@ public class UserReservationServiceTest {
 
     @Test
     void updateReservation_Success() {
-        when(mongoTemplate.updateFirst(any(), any(), eq(ProductDto.class)))
+        when(mongoTemplate.updateFirst(any(), any(), eq(Product.class)))
                 .thenReturn(null);
 
         // Given
@@ -134,11 +134,11 @@ public class UserReservationServiceTest {
         when(productRepository.findById(PRODUCT_ID))
                 .thenReturn(Optional.of(testProduct));
 
-        when(reservationRepository.save(any(ReservationDto.class)))
+        when(reservationRepository.save(any(Reservation.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         // When
-        ReservationDto result = reservationService.updateReservation(updateDto);
+        Reservation result = reservationService.updateReservation(updateDto);
 
         // Then
         assertNotNull(result); // null 체크 추가
@@ -178,11 +178,11 @@ public class UserReservationServiceTest {
                 .thenReturn(Optional.of(testReservation));
         when(reservationRepository.save(any()))
                 .thenAnswer(invocation -> invocation.getArgument(0));
-        when(productRepository.save(any(ProductDto.class)))
+        when(productRepository.save(any(Product.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         // When
-        ReservationDto result = reservationService.cancelReservation(cancelDto);
+        Reservation result = reservationService.cancelReservation(cancelDto);
 
         // Then
         assertNotNull(result);

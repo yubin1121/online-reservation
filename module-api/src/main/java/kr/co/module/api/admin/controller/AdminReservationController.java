@@ -3,7 +3,7 @@ package kr.co.module.api.admin.controller;
 import jakarta.validation.Valid;
 import kr.co.module.api.admin.dto.*;
 import kr.co.module.api.admin.service.AdminReservationService;
-import kr.co.module.core.dto.domain.ReservationDto;
+import kr.co.module.core.domain.Reservation;
 import kr.co.module.core.response.ApiResponse;
 import kr.co.module.core.response.ErrorResponse;
 import kr.co.module.core.code.ErrorCode;
@@ -23,7 +23,7 @@ public class AdminReservationController {
     // 예약 상태 변경 (완료, 확정, 거절)
     @PutMapping("status")
     public ResponseEntity<?> updateReservationStatus(@Valid @RequestBody AdminReservationUpdateDto updateDto) {
-        ReservationDto result = adminReservationService.updateReservationStatus(updateDto);
+        Reservation result = adminReservationService.updateReservationStatus(updateDto);
         if (result != null) {
             return ResponseEntity.ok(new ApiResponse<>(true, null, "예약 상태 변경 성공", null));
         } else {
@@ -34,10 +34,10 @@ public class AdminReservationController {
     }
 
     @GetMapping("search")
-    public ResponseEntity<ApiResponse<List<ReservationDto>>> searchAdminReservations(
+    public ResponseEntity<ApiResponse<List<Reservation>>> searchAdminReservations(
             @Valid @ModelAttribute AdminReservationSearchDto searchDto
     ) {
-        List<ReservationDto> result = adminReservationService.searchAdminReservations(searchDto);
+        List<Reservation> result = adminReservationService.searchAdminReservations(searchDto);
         return ResponseEntity.ok(new ApiResponse<>(true, result, "예약 현황 조회 성공", null));
     }
 }
