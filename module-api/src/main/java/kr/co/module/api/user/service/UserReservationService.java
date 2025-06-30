@@ -99,12 +99,23 @@ public class UserReservationService {
                 .build();
     }
 
+    private void validateStock(ProductDto product, int required) {
+        log.debug("재고 업데이트: productId={}, quantity={}, required={}",
+                product.getProductId(), product.getTotalQuantity(), required);
+        if (product.getTotalQuantity() < required) {
+            throw new InsufficientStockException(
+                    "재고 부족: 요청 " + required + "/현재 " + product.getTotalQuantity()
+            );
+        }
+    }
+
     // 예약 신청
     @Transactional
     public ReservationDto reserve(ReservationRequestDto request) {
         ProductDto product = productRepository.findById(request.getProductId())
                 .orElseThrow(() -> new ProductNotFoundException(request.getProductId()));
 
+        validateStock(product, request.getReservationCnt());
         validateReservation(product, request.getReservationCnt());
 
         ReservationDto reservation = buildReservation(request);
