@@ -3,7 +3,7 @@ package kr.co.module.api.admin.service;
 import kr.co.module.api.admin.dto.CategoryCreateDto;
 import kr.co.module.api.admin.dto.CategorySearchDto;
 import kr.co.module.api.admin.dto.CategoryUpdateDto;
-import kr.co.module.core.dto.domain.CategoryDto;
+import kr.co.module.core.domain.Category;
 import kr.co.module.core.exception.CategoryNotFoundException;
 import kr.co.module.mapper.repository.AdminCategoryRepository;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +15,6 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
@@ -30,10 +29,10 @@ public class AdminCategoryService {
     private final AdminCategoryRepository adminCategoryRepository;
 
     // 1. 생성
-    public CategoryDto createCategory(CategoryCreateDto dto) {
+    public Category createCategory(CategoryCreateDto dto) {
         validateDuplicateCategory(dto.getCategoryName());
 
-        CategoryDto category = buildCategory(dto);
+        Category category = buildCategory(dto);
         adminCategoryRepository.save(category);
 
         log.info("Created category: ID={}, Name={}", category.getCategoryId(), category.getCategoryName());
@@ -41,7 +40,7 @@ public class AdminCategoryService {
     }
 
     // 2. 수정
-    public CategoryDto updateCategory(CategoryUpdateDto dto) {
+    public Category updateCategory(CategoryUpdateDto dto) {
         return adminCategoryRepository.findById(dto.getCategoryId())
                 .map(category -> {
                     updateCategoryFields(category, dto);
@@ -51,7 +50,7 @@ public class AdminCategoryService {
     }
 
     // 3. 삭제
-    public CategoryDto deleteCategory(CategoryUpdateDto dto) {
+    public Category deleteCategory(CategoryUpdateDto dto) {
         return adminCategoryRepository.findById(dto.getCategoryId())
                 .map(category -> {
                     category.setDltYsno("Y");
@@ -63,10 +62,10 @@ public class AdminCategoryService {
     }
 
     // 4. 검색
-    public Page<CategoryDto> searchCategories(CategorySearchDto searchDto, Pageable pageable) {
+    public Page<Category> searchCategories(CategorySearchDto searchDto, Pageable pageable) {
         Query query = buildSearchQuery(searchDto).with(pageable);
-        List<CategoryDto> content = mongoTemplate.find(query, CategoryDto.class);
-        long total = mongoTemplate.count(query, CategoryDto.class);
+        List<Category> content = mongoTemplate.find(query, Category.class);
+        long total = mongoTemplate.count(query, Category.class);
 
         return new PageImpl<>(content, pageable, total);
     }
@@ -77,8 +76,8 @@ public class AdminCategoryService {
         }
     }
 
-    private CategoryDto buildCategory(CategoryCreateDto dto) {
-        return CategoryDto.builder()
+    private Category buildCategory(CategoryCreateDto dto) {
+        return Category.builder()
                 .categoryName(dto.getCategoryName())
                 .categoryDesc(dto.getCategoryDesc())
                 .categoryOrder(dto.getCategoryOrder())
@@ -88,7 +87,7 @@ public class AdminCategoryService {
                 .build();
     }
 
-    private void updateCategoryFields(CategoryDto category, CategoryUpdateDto dto) {
+    private void updateCategoryFields(Category category, CategoryUpdateDto dto) {
         if (StringUtils.hasText(dto.getCategoryDesc())) {
             category.setCategoryDesc(dto.getCategoryDesc());
         }

@@ -4,7 +4,7 @@ import jakarta.validation.Valid;
 import kr.co.module.api.admin.dto.*;
 import kr.co.module.api.admin.service.AdminProductService;
 import kr.co.module.core.code.ErrorCode;
-import kr.co.module.core.dto.domain.ProductDto;
+import kr.co.module.core.domain.Product;
 import kr.co.module.core.response.ApiResponse;
 import kr.co.module.core.response.ErrorResponse;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +24,7 @@ public class AdminProductController {
     // 상품 등록
     @PostMapping("register")
     public ResponseEntity<?> createProduct(@Valid @RequestBody ProductCreateDto productCreateDto) {
-        ProductDto result = adminProductService.createProduct(productCreateDto);
+        Product result = adminProductService.createProduct(productCreateDto);
         if (result != null) {
             return ResponseEntity.ok(new ApiResponse<>(true, null, "상품 등록 성공", null));
         } else {
@@ -37,7 +37,7 @@ public class AdminProductController {
     // 상품 수정
     @PutMapping("update/{productId}")
     public ResponseEntity<?> updateProduct(@Valid @RequestBody ProductUpdateDto productUpdateDto) {
-        ProductDto result = adminProductService.updateProduct(productUpdateDto);
+        Product result = adminProductService.updateProduct(productUpdateDto);
         if (result != null) {
             return ResponseEntity.ok(new ApiResponse<>(true, null, "상품 수정 성공", null));
         } else {
@@ -50,7 +50,7 @@ public class AdminProductController {
     // 상품 삭제
     @DeleteMapping("delete/{productId}")
     public ResponseEntity<?> deleteProduct(@Valid @RequestBody ProductUpdateDto productUpdateDto) {
-        ProductDto result = adminProductService.deleteProduct(productUpdateDto);
+        Product result = adminProductService.deleteProduct(productUpdateDto);
         if (result != null) {
             return ResponseEntity.ok(new ApiResponse<>(true, null, "상품 삭제 성공", null));
         } else {
@@ -62,10 +62,10 @@ public class AdminProductController {
 
     // 본인(관리자) 상품만 조회
     @GetMapping("my")
-    public ResponseEntity<ApiResponse<List<ProductDto>>> searchMyProducts(
+    public ResponseEntity<ApiResponse<List<Product>>> searchMyProducts(
             @ModelAttribute AdminProductSearchDto searchDto
     ) {
-        List<ProductDto> result = adminProductService.searchMyProducts(searchDto);
+        List<Product> result = adminProductService.searchMyProducts(searchDto);
         return ResponseEntity.ok(new ApiResponse<>(true, result, "본인 상품 조회 성공", null));
     }
 }

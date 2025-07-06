@@ -1,4 +1,4 @@
-package kr.co.module.core.dto.domain;
+package kr.co.module.core.domain;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 @Document(collection = "reservation")
-public class ReservationDto {
+public class Reservation {
     // 예약 아이디(상품ID+예약자ID+일자+시간)
     @Id
     private String reservationId;

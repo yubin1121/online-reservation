@@ -2,7 +2,7 @@ package kr.co.module.api.admin.service;
 
 import kr.co.module.api.admin.dto.*;
 import kr.co.module.api.user.dto.ProductSearchDto;
-import kr.co.module.core.dto.domain.*;
+import kr.co.module.core.domain.Product;
 import kr.co.module.core.exception.ProductNotFoundException;
 import kr.co.module.mapper.repository.AdminProductRepository;
 import lombok.RequiredArgsConstructor;
@@ -29,14 +29,14 @@ public class AdminProductService {
     private final AdminProductRepository adminProductRepository;
 
     // 본인(관리자) 상품만 조회
-    public List<ProductDto> searchMyProducts(AdminProductSearchDto searchDto) {
+    public List<Product> searchMyProducts(AdminProductSearchDto searchDto) {
         Criteria criteria = Criteria.where("adminId").is(searchDto.getAdminId());
         Query query = new Query(criteria);
-        return mongoTemplate.find(query, ProductDto.class);
+        return mongoTemplate.find(query, Product.class);
     }
 
-    private ProductDto buildProduct(ProductCreateDto dto) {
-        return ProductDto.builder()
+    private Product buildProduct(ProductCreateDto dto) {
+        return Product.builder()
                 .categoryId(dto.getCategoryId())
                 .productName(dto.getProductName())
                 .productDesc(dto.getProductDesc())
@@ -52,8 +52,8 @@ public class AdminProductService {
     }
 
     // 상품 생성
-    public ProductDto createProduct(ProductCreateDto productCreateDto) {
-        ProductDto product = buildProduct(productCreateDto);
+    public Product createProduct(ProductCreateDto productCreateDto) {
+        Product product = buildProduct(productCreateDto);
         adminProductRepository.save(product);
         log.info(product.toString());
         return product;
@@ -62,7 +62,7 @@ public class AdminProductService {
 
 
     // 상품 필드 업데이트
-    private void updateProductFields(ProductDto product, ProductUpdateDto dto) {
+    private void updateProductFields(Product product, ProductUpdateDto dto) {
         if (StringUtils.hasText(dto.getProductName())) {
             product.setProductName(dto.getProductName());
         }
@@ -97,7 +97,7 @@ public class AdminProductService {
     }
 
     // 상품 수정
-    public ProductDto updateProduct(ProductUpdateDto dto) {
+    public Product updateProduct(ProductUpdateDto dto) {
         return adminProductRepository.findById(dto.getProductId())
                 .filter(product -> product.getCrtrId().equals(dto.getAdminId()))
                 .filter(product -> product.getAmnrId() != null && product.getAmnrId().equals(dto.getAdminId()))
@@ -110,7 +110,7 @@ public class AdminProductService {
     }
 
     // 상품 삭제
-    public ProductDto deleteProduct(ProductUpdateDto dto) {
+    public Product deleteProduct(ProductUpdateDto dto) {
         return adminProductRepository.findById(dto.getProductId())
                 .filter(product -> product.getCrtrId().equals(dto.getAdminId()))  // 생성자 확인
                 .filter(product -> product.getAmnrId() != null && product.getAmnrId().equals(dto.getAdminId()))  // 마지막 수정자 확인
@@ -124,10 +124,10 @@ public class AdminProductService {
     }
 
     // 상품 검색
-    public Page<ProductDto> searchProducts(ProductSearchDto searchDto, Pageable pageable) {
+    public Page<Product> searchProducts(ProductSearchDto searchDto, Pageable pageable) {
         Query query = buildSearchQuery(searchDto).with(pageable);
-        List<ProductDto> content = mongoTemplate.find(query, ProductDto.class);
-        long total = mongoTemplate.count(query, ProductDto.class);
+        List<Product> content = mongoTemplate.find(query, Product.class);
+        long total = mongoTemplate.count(query, Product.class);
 
         return new PageImpl<>(content, pageable, total);
     }
