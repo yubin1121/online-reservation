@@ -116,6 +116,9 @@ public class UserReservationServiceTest {
 
     @Test
     void updateReservation_Success() {
+        when(mongoTemplate.updateFirst(any(), any(), eq(ProductDto.class)))
+                .thenReturn(null);
+
         // Given
         ReservationUpdateDto updateDto = new ReservationUpdateDto(
                 RESERVATION_ID, USER_ID,
