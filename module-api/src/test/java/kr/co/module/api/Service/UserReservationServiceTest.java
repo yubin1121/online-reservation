@@ -49,13 +49,13 @@ public class UserReservationServiceTest {
     @BeforeEach
     void setUp() {
         testProduct = Product.builder()
-                .productId(PRODUCT_ID)
+                ._id(PRODUCT_ID)
                 .totalQuantity(10)
                 .dltYsno("N")
                 .build();
 
         testReservation = Reservation.builder()
-                .reservationId(RESERVATION_ID)
+                ._id(RESERVATION_ID)
                 .userId(USER_ID)
                 .productId(PRODUCT_ID)
                 .reservationCnt(2)

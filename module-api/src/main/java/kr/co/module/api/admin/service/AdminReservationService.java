@@ -113,9 +113,13 @@ public class AdminReservationService {
 
         return mongoTemplate.find(new Query(productCriteria), Product.class)
                 .stream()
-                .map(Product::getProductId)
+                .map(Product::get_id)
                 .collect(Collectors.toList());
     }
 
 
+    public Reservation createReservation(String testProductId, String currentUserId, String reservationDate, String reservationTime, int i) {
+        Reservation newReservation = Reservation.builder().build();
+        return newReservation;
+    }
 }

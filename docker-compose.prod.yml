@@ -1,0 +1,79 @@
+# docker-compose.prod.yml
+
+services:
+  mongo1:
+    image: mongo:6.0
+    hostname: mongo1
+    container_name: mongo1_prod
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo1_prod:/data/db
+      - ./mongodb.key:/etc/mongodb.key
+    environment:
+      # 운영용 root 계정
+      - MONGO_INITDB_ROOT_USERNAME=prod_root
+      - MONGO_INITDB_ROOT_PASSWORD=prod_root_secure_password
+      - MONGO_INITDB_DATABASE=ALGoDB_prod
+    command: >
+      mongod --replSet rs0_prod # 레플리카 셋 이름에 환경 접미사 추가
+      --keyFile /etc/mongodb.key
+      --bind_ip_all
+    networks:
+      - mongo-cluster_prod
+
+  mongo2:
+    image: mongo:6.0
+    hostname: mongo2
+    container_name: mongo2_prod
+    restart: always
+    depends_on:
+      - mongo1
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongo2_prod:/data/db
+      - ./mongodb.key:/etc/mongodb.key
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=prod_root
+      - MONGO_INITDB_ROOT_PASSWORD=prod_root_secure_password
+      - MONGO_INITDB_DATABASE=ALGoDB_prod
+    command: >
+      mongod --replSet rs0_prod
+      --keyFile /etc/mongodb.key
+      --bind_ip_all
+    networks:
+      - mongo-cluster_prod
+
+  mongo3:
+    image: mongo:6.0
+    hostname: mongo3
+    container_name: mongo3_prod
+    restart: always
+    depends_on:
+      - mongo2
+    ports:
+      - "27019:27017"
+    volumes:
+      - mongo3_prod:/data/db
+      - ./mongodb.key:/etc/mongodb.key
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=prod_root
+      - MONGO_INITDB_ROOT_PASSWORD=prod_root_secure_password
+      - MONGO_INITDB_DATABASE=ALGoDB_prod
+    command: >
+      mongod --replSet rs0_prod
+      --keyFile /etc/mongodb.key
+      --bind_ip_all
+    networks:
+      - mongo-cluster_prod
+
+volumes:
+  mongo1_prod:
+  mongo2_prod:
+  mongo3_prod:
+
+networks:
+  mongo-cluster_prod:
+    name: mongoCluster_prod

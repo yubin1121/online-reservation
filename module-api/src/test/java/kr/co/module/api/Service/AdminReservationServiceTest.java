@@ -53,12 +53,12 @@ public class AdminReservationServiceTest {
         updateDto.setAdminId("admin1");
 
         Reservation reservation = new Reservation();
-        reservation.setReservationId("1");
+        reservation.set_id("1");
         reservation.setReservationStatus("PENDING");
         reservation.setProductId("product123");  // 추가: 상품 ID 설정
 
         Product product = new Product();
-        product.setProductId("product123");
+        product.set_id("product123");
         product.setCrtrId("admin1");  // 상품 생성자를 admin1로 설정
 
         when(adminReservationRepository.findById("1")).thenReturn(Optional.of(reservation));
@@ -98,13 +98,13 @@ public class AdminReservationServiceTest {
         searchDto.setCategoryId("20");
 
         Product p1 = Product.builder()
-                .productId("10")
+                ._id("10")
                 .categoryId("20")
                 .crtrId("admin2")
                 .build();
 
         Reservation r1 = new Reservation();
-        r1.setReservationId("100");
+        r1.set_id("100");
         r1.setProductId("10");
 
         when(mongoTemplate.find(any(Query.class), eq(Product.class)))
@@ -118,7 +118,7 @@ public class AdminReservationServiceTest {
         // then
         assertNotNull(result);
         assertEquals(1, result.size());
-        assertEquals("100", result.get(0).getReservationId());
+        assertEquals("100", result.get(0).get_id());
 
     }
 

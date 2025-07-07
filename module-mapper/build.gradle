@@ -11,6 +11,13 @@ repositories {
 
 dependencies {
     implementation project(':module-core')
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    // Test dependencies for this module
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.11.3' // Specific JUnit 5 version
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.11.3'
     testImplementation("org.springframework.boot:spring-boot-starter-test")
-    implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
+    implementation ("org.springframework.boot:spring-boot-starter-data-mongodb")
 }
