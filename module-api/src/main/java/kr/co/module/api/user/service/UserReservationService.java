@@ -85,7 +85,8 @@ public class UserReservationService {
 
     private Reservation buildReservation(ReservationRequestDto dto) {
         return Reservation.builder()
-                .reservationId(dto.getProductId()+dto.getUserId()+dto.getReservationDate()+dto.getReservationTime())
+                ._id(null)
+                .reservationBizId(dto.getProductId()+dto.getUserId()+dto.getReservationDate()+dto.getReservationTime())
                 .reservationStatus("PENDING")
                 .reservationTime(dto.getReservationTime())
                 .reservationDate(dto.getReservationDate())
@@ -98,7 +99,7 @@ public class UserReservationService {
 
     private void validateStock(Product product, int required) {
         log.debug("재고 업데이트: productId={}, quantity={}, required={}",
-                product.getProductId(), product.getTotalQuantity(), required);
+                product.get_id(), product.getTotalQuantity(), required);
         if (product.getTotalQuantity() < required) {
             throw new InsufficientStockException(
                     "재고 부족: 요청 " + required + "/현재 " + product.getTotalQuantity()
@@ -118,7 +119,7 @@ public class UserReservationService {
         Reservation reservation = buildReservation(request);
         reservationRepository.save(reservation);
 
-        updateProductStock(product.getProductId(), -request.getReservationCnt());
+        updateProductStock(product.get_id(), -request.getReservationCnt());
         log.info("예약 생성: {}", reservation);
         return reservation;
     }
