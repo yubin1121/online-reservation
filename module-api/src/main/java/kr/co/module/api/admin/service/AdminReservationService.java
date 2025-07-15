@@ -1,9 +1,13 @@
 package kr.co.module.api.admin.service;
+import com.mongodb.client.result.UpdateResult;
 import kr.co.module.api.admin.dto.*;
 import kr.co.module.core.domain.Product;
 import kr.co.module.core.domain.Reservation;
+import kr.co.module.core.exception.InsufficientStockException;
+import kr.co.module.core.exception.ProductNotFoundException;
 import kr.co.module.core.exception.ReservationNotFoundException;
 import kr.co.module.core.exception.UnauthorizedAccessException;
+import kr.co.module.core.status.ReservationStatus;
 import kr.co.module.mapper.repository.AdminProductRepository;
 import kr.co.module.mapper.repository.AdminReservationRepository;
 import lombok.RequiredArgsConstructor;
@@ -11,7 +15,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
@@ -29,7 +35,28 @@ public class AdminReservationService {
     private final AdminReservationRepository adminReservationRepository;
     private final AdminProductRepository adminProductRepository;
 
-    // 예약 상태 변경
+    private void updateProductStock(String productId, int quantityDelta) {
+        Query query = new Query(
+                Criteria.where("_id").is(productId)
+                        .and("totalQuantity").gte(Math.abs(quantityDelta))
+        );
+        Update update = new Update().inc("totalQuantity", quantityDelta);
+        UpdateResult result = mongoTemplate.updateFirst(query, update, Product.class);
+
+        if (result.getModifiedCount() == 0) {
+            Product latestProduct = adminProductRepository.findById(productId) // adminProductRepository 사용
+                    .orElseThrow(() -> new ProductNotFoundException(productId + " (재고 업데이트 실패 시점)"));
+
+            throw new InsufficientStockException(
+                    "재고 부족 또는 업데이트 실패: 요청 " + Math.abs(quantityDelta) +
+                            "/현재 " + latestProduct.getTotalQuantity() +
+                            " (상품 ID: " + productId + ")"
+            );
+        }
+    }
+
+    // 1-1.예약 상태 변경
+    @Transactional
     public Reservation updateReservationStatus(AdminReservationUpdateDto dto) {
         Reservation reservation = adminReservationRepository.findById(dto.getReservationId())
                 .orElseThrow(() -> new ReservationNotFoundException(dto.getReservationId()));
@@ -37,12 +64,23 @@ public class AdminReservationService {
         // 본인 상품의 예약인지 확인
         validateReservationOwnership(reservation.getProductId(), dto.getAdminId());
 
-        reservation.setReservationStatus(dto.getReservationStatus());
+        ReservationStatus currentStatus = ReservationStatus.valueOf(reservation.getReservationStatus());
+        ReservationStatus newStatus = ReservationStatus.valueOf(dto.getReservationStatus());
+
+        if (!currentStatus.canTransitionTo(newStatus)) {
+            throw new IllegalStateException(
+                    "허용되지 않은 상태 전환: " + currentStatus.name() + " -> " + newStatus.name() +
+                            " (예약 ID: " + reservation.getId() + ")"
+            );
+        }
+
+        reservation.setReservationStatus(newStatus.name());
         reservation.setAmnrId(dto.getAdminId());
         reservation.setAmndDttm(LocalDateTime.now());
 
+
         log.info("Reservation {} status updated to {} by admin {}",
-                dto.getReservationId(), dto.getReservationStatus(), dto.getAdminId());
+                dto.getReservationId(), newStatus.name(), dto.getAdminId());
 
         return adminReservationRepository.save(reservation);
     }
@@ -53,49 +91,75 @@ public class AdminReservationService {
         }
     }
 
+    // 1-2.예약 거절
+    @Transactional
+    public Reservation rejectReservation(AdminReservationUpdateDto dto) {
+        Reservation reservation = adminReservationRepository.findById(dto.getReservationId())
+                .orElseThrow(() -> new ReservationNotFoundException(dto.getReservationId()));
+
+        // 본인 상품의 예약인지 확인
+        validateReservationOwnership(reservation.getProductId(), dto.getAdminId());
+
+        // PENDING 상태의 예약만 거절 가능하도록 검증
+        ReservationStatus currentStatus = ReservationStatus.valueOf(reservation.getReservationStatus());
+        if (!currentStatus.canTransitionTo(ReservationStatus.REJECTED)) {
+            throw new IllegalStateException(
+                    "허용되지 않은 상태 전환: " + currentStatus.name() + " -> " + ReservationStatus.REJECTED.name() +
+                            " (예약 ID: " + reservation.getId() + ")"
+            );
+        }
+
+        // 재고 복구
+        updateProductStock(reservation.getProductId(), reservation.getReservationCnt());
+
+        // 예약 상태를 REJECTED로 변경 및 수정자 정보 업데이트
+        reservation.setReservationStatus(ReservationStatus.REJECTED.name());
+        reservation.setAmnrId(dto.getAdminId());
+        reservation.setAmndDttm(LocalDateTime.now());
+
+        log.info("예약 거절: {} (관리자: {})", reservation.getId(), dto.getAdminId());
+        return adminReservationRepository.save(reservation);
+    }
+
 
     // 2. 예약 검색
     public List<Reservation> searchAdminReservations(AdminReservationSearchDto searchDto) {
-        // 본인 상품 ID 목록 조회
-        List<String> productIds = getMyProductIds(searchDto);
+        // 1. 본인 상품 ID 목록 조회
+        List<String> myProductIds = getMyProductIds(searchDto);
 
-        // 예약 검색 쿼리 빌드
-        Criteria criteria = Criteria.where("productId").in(productIds);
-        if (StringUtils.hasText(searchDto.getProductId())) {
-            criteria.and("productId").is(searchDto.getProductId());
+        if (myProductIds.isEmpty()) {
+            return Collections.emptyList();
         }
+
+        // 2. 예약 검색 쿼리 빌드
+        Criteria reservationCriteria = Criteria.where("productId").in(myProductIds);
 
         // 3. 카테고리 ID 조건
         if (StringUtils.hasText(searchDto.getCategoryId())) {
-            criteria.and("categoryId").is(searchDto.getCategoryId());
+            reservationCriteria.and("productCategoryId").is(searchDto.getCategoryId());
         }
+
 
         // 4. 예약 상태 조건
         if (StringUtils.hasText(searchDto.getReservationStatus())) {
-            criteria.and("reservationStatus").is(searchDto.getReservationStatus());
+            reservationCriteria.and("reservationStatus").is(searchDto.getReservationStatus());
         }
 
         // 5. 날짜 범위 조건
         if (searchDto.getFromDate() != null && searchDto.getToDate() != null) {
-            criteria.and("reservationDate")
+            reservationCriteria.and("reservationDate")
                     .gte(searchDto.getFromDate())
                     .lte(searchDto.getToDate());
         } else {
             if (searchDto.getFromDate() != null) {
-                criteria.and("reservationDate").gte(searchDto.getFromDate());
+                reservationCriteria.and("reservationDate").gte(searchDto.getFromDate());
             }
             if (searchDto.getToDate() != null) {
-                criteria.and("reservationDate").lte(searchDto.getToDate());
+                reservationCriteria.and("reservationDate").lte(searchDto.getToDate());
             }
         }
 
-        List<Product> products = mongoTemplate.find(new Query(criteria), Product.class);
-        // 상품이 없으면 바로 빈 리스트 반환
-        if (products.isEmpty()) {
-            return Collections.emptyList();
-        }
-        Query reservationQuery = new Query(Criteria.where("productId").in(productIds));
-
+        Query reservationQuery = new Query(reservationCriteria);
         return mongoTemplate.find(reservationQuery, Reservation.class);
 
     }
@@ -113,13 +177,9 @@ public class AdminReservationService {
 
         return mongoTemplate.find(new Query(productCriteria), Product.class)
                 .stream()
-                .map(Product::get_id)
+                .map(Product::getId)
                 .collect(Collectors.toList());
     }
 
 
-    public Reservation createReservation(String testProductId, String currentUserId, String reservationDate, String reservationTime, int i) {
-        Reservation newReservation = Reservation.builder().build();
-        return newReservation;
-    }
 }

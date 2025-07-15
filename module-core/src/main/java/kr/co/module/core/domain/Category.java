@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 public class Category {
     //카테고리 id
     @Id
-    private String _id;
+    private String id;
     //카테고리명
     private String categoryName;
     //카테고리 설명
