@@ -1,0 +1,79 @@
+# docker-compose.dev.yml
+
+services:
+  mongo1:
+    image: mongo:6.0
+    hostname: mongo1
+    container_name: mongo1_dev
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo1_dev:/data/db
+      - ./mongodb.key:/etc/mongodb.key
+    environment:
+      # 개발/테스트용 root 계정
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_ROOT_USER}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASS}
+      - MONGO_INITDB_DATABASE=${MONGO_INIT_DB} # 개발/테스트용 DB 이름
+    command: >
+      mongod --replSet rs0_dev # 레플리카 셋 이름에 환경 접미사 추가
+      --keyFile /etc/mongodb.key
+      --bind_ip_all
+    networks:
+      - mongo-cluster_dev # 개발/테스트용 네트워크
+
+  mongo2:
+    image: mongo:6.0
+    hostname: mongo2
+    container_name: mongo2_dev
+    restart: always
+    depends_on:
+      - mongo1
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongo2_dev:/data/db
+      - ./mongodb.key:/etc/mongodb.key
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_ROOT_USER}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASS}
+      - MONGO_INITDB_DATABASE=${MONGO_INIT_DB}
+    command: >
+      mongod --replSet rs0_dev
+      --keyFile /etc/mongodb.key
+      --bind_ip_all
+    networks:
+      - mongo-cluster_dev
+
+  mongo3:
+    image: mongo:6.0
+    hostname: mongo3
+    container_name: mongo3_dev
+    restart: always
+    depends_on:
+      - mongo2
+    ports:
+      - "27019:27017"
+    volumes:
+      - mongo3_dev:/data/db
+      - ./mongodb.key:/etc/mongodb.key
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_ROOT_USER}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASS}
+      - MONGO_INITDB_DATABASE=${MONGO_INIT_DB}
+    command: >
+      mongod --replSet rs0_dev
+      --keyFile /etc/mongodb.key
+      --bind_ip_all
+    networks:
+      - mongo-cluster_dev
+
+volumes:
+  mongo1_dev:
+  mongo2_dev:
+  mongo3_dev:
+
+networks:
+  mongo-cluster_dev: # 개발/테스트용 네트워크 (내부 네트워크로 생성)
+    name: mongoCluster_dev

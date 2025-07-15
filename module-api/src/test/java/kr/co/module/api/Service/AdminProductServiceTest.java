@@ -35,7 +35,7 @@ public class AdminProductServiceTest {
         searchDto.setAdminId("admin1");
 
         Product p1 = Product.builder()
-                .productId("1")
+                ._id("1")
                 .productName("상품1")
                 .crtrId("admin1")
                 .build();
@@ -92,7 +92,7 @@ public class AdminProductServiceTest {
         updateDto.setAdminId("admin3");
 
         Product origin = Product.builder()
-                .productId("100")
+                ._id("100")
                 .productName("기존상품")
                 .crtrId("admin3")
                 .dltYsno("N")
@@ -121,7 +121,7 @@ public class AdminProductServiceTest {
         updateDto.setAdminId("adminX");
 
         Product origin = Product.builder()
-                .productId("200")
+                ._id("200")
                 .productName("기존상품")
                 .crtrId("adminY")
                 .dltYsno("N")
@@ -145,7 +145,7 @@ public class AdminProductServiceTest {
         updateDto.setAdminId("admin4");
 
         Product origin = Product.builder()
-                .productId("300")
+                ._id("300")
                 .productName("상품삭제")
                 .crtrId("admin4")
                 .dltYsno("N")
@@ -172,7 +172,7 @@ public class AdminProductServiceTest {
         updateDto.setAdminId("adminX");
 
         Product origin = Product.builder()
-                .productId("400")
+                ._id("400")
                 .productName("상품삭제")
                 .crtrId("adminY")
                 .dltYsno("N")

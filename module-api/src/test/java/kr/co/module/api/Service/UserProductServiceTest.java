@@ -37,7 +37,7 @@ public class UserProductServiceTest {
     @BeforeEach
     void setup() {
         product = Product.builder()
-                .productId("p1")
+                ._id("p1")
                 .categoryId("c1")
                 .productName("테스트상품")
                 .productPlace("서울")
@@ -58,7 +58,7 @@ public class UserProductServiceTest {
 
         // then
         assertThat(result).hasSize(1);
-        assertThat(result.get(0).getProductId()).isEqualTo("p1");
+        assertThat(result.get(0).get_id()).isEqualTo("p1");
 
         ArgumentCaptor<Query> queryCaptor = ArgumentCaptor.forClass(Query.class);
         verify(mongoTemplate).find(queryCaptor.capture(), eq(Product.class));
