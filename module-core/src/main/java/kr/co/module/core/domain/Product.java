@@ -18,7 +18,7 @@ import java.util.Map;
 public class Product {
     //상품 아이디
     @Id
-    private String _id;
+    private String id;
     //카테고리 아이디
     private String categoryId;
     //상품명

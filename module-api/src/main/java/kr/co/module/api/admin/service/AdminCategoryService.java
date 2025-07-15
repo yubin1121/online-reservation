@@ -35,7 +35,7 @@ public class AdminCategoryService {
         Category category = buildCategory(dto);
         adminCategoryRepository.save(category);
 
-        log.info("Created category: ID={}, Name={}", category.get_id(), category.getCategoryName());
+        log.info("Created category: ID={}, Name={}", category.getId(), category.getCategoryName());
         return category;
     }
 

@@ -18,10 +18,12 @@ import java.time.LocalDateTime;
 @Document(collection = "reservation")
 public class Reservation {
     @Id
-    private String _id;
+    private String id;
 
     // 예약 아이디 (상품ID+예약자ID+일자+시간)
     private String reservationBizId;
+
+    private String productCategoryId;
     // 상품 아이디
     private String productId;
     // 예약자 아이디

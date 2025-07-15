@@ -85,7 +85,7 @@ public class AdminCategoryServiceTest {
         updateDto.setAdminId("admin2");
 
         Category origin = Category.builder()
-                ._id("100")
+                .id("100")
                 .categoryName("카테고리1")
                 .categoryDesc("기존 설명")
                 .categoryOrder(1)
@@ -131,7 +131,7 @@ public class AdminCategoryServiceTest {
         updateDto.setAdminId("admin3");
 
         Category origin = Category.builder()
-                ._id("200")
+                .id("200")
                 .categoryName("카테고리2")
                 .dltYsno("N")
                 .build();
@@ -174,7 +174,7 @@ public class AdminCategoryServiceTest {
         searchDto.setAdminId("admin4");
 
         Category c1 = Category.builder()
-                ._id("100")
+                .id("100")
                 .categoryName("테스트카테고리")
                 .categoryOrder(3)
                 .crtrId("admin4")
