@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -33,7 +34,7 @@ public class ProductCreateDto {
     @NotBlank(message = "위치는 필수입니다.")
     private String productLocation;
     //상품 이미지 리스트
-    private List<String> productImgList;
+    private List<MultipartFile> productImages;
     //상품 이용 가능한 날짜
     private List<String> productAvlbDateList;
     //상품 이용 가능한 날짜별 시간대
