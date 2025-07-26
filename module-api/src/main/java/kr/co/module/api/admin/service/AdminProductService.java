@@ -1,6 +1,7 @@
 package kr.co.module.api.admin.service;
 
 import kr.co.module.api.admin.dto.*;
+import kr.co.module.api.common.service.ImageUploadService;
 import kr.co.module.api.user.dto.ProductSearchDto;
 import kr.co.module.core.domain.Product;
 import kr.co.module.core.exception.ProductNotFoundException;
@@ -16,7 +17,7 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
-
+import java.util.concurrent.CompletableFuture;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -27,6 +28,8 @@ public class AdminProductService {
 
     private final MongoTemplate mongoTemplate;
     private final AdminProductRepository adminProductRepository;
+    private final ImageUploadService imageUploadService;
+
 
     // 본인(관리자) 상품만 조회
     public List<Product> searchMyProducts(AdminProductSearchDto searchDto) {
@@ -44,7 +47,7 @@ public class AdminProductService {
                 .productLocation(dto.getProductLocation())
                 .productAvlbMaxPerSlots(dto.getProductAvlbMaxPerSlots())
                 .productAvlbDateList(dto.getProductAvlbDateList())
-                .productImgList(dto.getProductImgList())
+                //.productImgList(dto.getProductImgList())
                 .crtrId(dto.getAdminId())
                 .amnrId(dto.getAdminId())
                 .dltYsno("N")
@@ -54,9 +57,23 @@ public class AdminProductService {
     // 상품 생성
     public Product createProduct(ProductCreateDto productCreateDto) {
         Product product = buildProduct(productCreateDto);
-        adminProductRepository.save(product);
+        Product savedProduct = adminProductRepository.save(product);
+        imageUploadService.uploadProductImagesAsync(productCreateDto.getProductImages(), savedProduct.getId())
+                .thenAccept(imageUrls -> {
+                    // 이미지 업로드 성공 후 Product 엔티티 업데이트
+                    savedProduct.setProductImgList(imageUrls);
+                    adminProductRepository.save(savedProduct); // 이미지 URL 업데이트 저장
+                    log.info("Product image URLs updated for product: {}", savedProduct.getId());
+                })
+                .exceptionally(ex -> {
+                    log.error("Failed to upload images and update product for product {}: {}", savedProduct.getId(), ex.getMessage());
+                    // 이미지 업로드 실패 시 대체 로직 또는 롤백 고려
+                    return null; // 예외를 처리하고 null 반환
+                });
+
+        log.info("Product {}", savedProduct.getId());
         log.info(product.toString());
-        return product;
+        return savedProduct;
     }
 
 
@@ -78,9 +95,37 @@ public class AdminProductService {
         if (StringUtils.hasText(dto.getProductLocation())) {
             product.setProductLocation(dto.getProductLocation());
         }
-        if (!CollectionUtils.isEmpty(dto.getProductImgList())) {
+        // case 1: 새로운 이미지가 있을 경우
+        if (!CollectionUtils.isEmpty(dto.getNewProductImages())) {
+            List<String> oldImageUrls = product.getProductImgList();
+            if (oldImageUrls != null && !oldImageUrls.isEmpty()) {
+                // 기존 이미지 비동기 삭제
+                imageUploadService.deleteProductImagesAsync(oldImageUrls)
+                        .exceptionally(ex -> {
+                            log.error("Failed to asynchronously delete old images for product {}: {}", product.getId(), ex.getMessage());
+                            return null;
+                        });
+            }
+            // 새 이미지 비동기 업로드
+            imageUploadService.uploadProductImagesAsync(dto.getNewProductImages(), product.getId())
+                    .thenAccept(newImageUrls -> {
+                        // 새로운 이미지 URL을 Product 엔티티에 설정
+                        product.setProductImgList(newImageUrls);
+                        // 업데이트된 Product 저장
+                        adminProductRepository.save(product);
+                        log.info("Product image URLs updated asynchronously for product: {}", product.getId());
+                    })
+                    .exceptionally(ex -> {
+                        log.error("Failed to asynchronously upload new images and update product for product {}: {}", product.getId(), ex.getMessage());
+                        // 이미지 업로드 실패 시 대체 로직 또는 롤백 고려
+                        return null;
+                    });
+        }
+        // case 2: productImgList (List<String>)가 DTO에 명시적으로 넘어왔는데, newProductImages는 없을 경우
+        else if (dto.getProductImgList() != null) { // newProductImages가 없고 productImgList가 있을 경우
             product.setProductImgList(dto.getProductImgList());
         }
+
         if (!CollectionUtils.isEmpty(dto.getProductAvlbDateList())) {
             product.setProductAvlbDateList(dto.getProductAvlbDateList());
         }

@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -25,6 +26,7 @@ public class ProductUpdateDto {
     private String productPlace;
     private String productLocation;
     private List<String> productImgList;
+    private List<MultipartFile> newProductImages;
     private List<String> productAvlbDateList;
     private Map<String, List<String>> productAvlbTimeSlots; //
     private Map<String, Integer> productAvlbMaxPerSlots;

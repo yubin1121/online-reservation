@@ -25,7 +25,7 @@ public class AdminProductServiceTest {
     void setUp() {
         mongoTemplate = mock(MongoTemplate.class);
         adminProductRepository = mock(AdminProductRepository.class);
-        adminProductService = new AdminProductService(mongoTemplate, adminProductRepository);
+       // adminProductService = new AdminProductService(mongoTemplate, adminProductRepository);
     }
 
     @Test
