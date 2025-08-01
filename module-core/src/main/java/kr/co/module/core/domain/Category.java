@@ -24,6 +24,7 @@ public class Category {
     private String categoryDesc;
     //카테고리 정렬
     private Integer categoryOrder;
+    
 
     private String crtrId;
 

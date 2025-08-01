@@ -22,4 +22,25 @@ public class AsyncConfig {
         return executor;
     }
 
+    @Bean(name = "userQueryExecutor")
+    public Executor userQueryExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(3);
+        executor.setMaxPoolSize(6);
+        executor.setQueueCapacity(20);
+        executor.setThreadNamePrefix("UserQuery-Async-");
+        executor.initialize();
+        return executor;
+    }
+
+    @Bean(name = "adminQueryExecutor")
+    public Executor adminQueryExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(2);
+        executor.setMaxPoolSize(4);
+        executor.setQueueCapacity(10);
+        executor.setThreadNamePrefix("AdminQuery-Async-");
+        executor.initialize();
+        return executor;
+    }
 }

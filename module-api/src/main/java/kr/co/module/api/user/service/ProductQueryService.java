@@ -5,6 +5,7 @@ import kr.co.module.core.domain.Product;
 import kr.co.module.mapper.repository.AdminProductRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -12,6 +13,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 @Slf4j
 @Service
@@ -21,61 +24,65 @@ public class ProductQueryService {
     private final MongoTemplate mongoTemplate;
     private final AdminProductRepository adminProductRepository;
 
-    public List<Product> searchProducts(ProductSearchDto searchDto) {
-        Criteria criteria = new Criteria();
+    @Qualifier("userQueryExecutor")
+    private Executor userQueryExecutor;
 
-        // 1. 기본 조건: 삭제되지 않은 상품
-        criteria.and("dltYsno").ne("Y");
+    // ✅ 비동기 상품 검색
+    public CompletableFuture<List<Product>> searchProducts(ProductSearchDto searchDto) {
+        return CompletableFuture.supplyAsync(() -> {
+            Criteria criteria = new Criteria();
+            // 1. 삭제 안 된 상품만
+            criteria.and("dltYsno").ne("Y");
 
-        // 2. 관리자 ID (특정 판매자 상품 검색)
-        if (StringUtils.hasText(searchDto.getProductAdminId())) {
-            criteria.and("crtrId").is(searchDto.getProductAdminId());
-        }
-
-        // 3. 카테고리 ID
-        if (StringUtils.hasText(searchDto.getCategoryId())) {
-            criteria.and("categoryId").is(searchDto.getCategoryId());
-        }
-
-        // 4. 상품명
-        if (StringUtils.hasText(searchDto.getProductName())) {
-            criteria.and("productName").regex(searchDto.getProductName(), "i");
-        }
-
-        // 5. 장소
-        if (StringUtils.hasText(searchDto.getProductPlace())) {
-            criteria.and("productPlace").regex(searchDto.getProductPlace(), "i");
-        }
-
-        // 6. 날짜 범위
-        if (searchDto.getSrchFromDate() != null || searchDto.getSrchToDate() != null) {
-            Criteria dateCriteria = new Criteria();
-            if (searchDto.getSrchFromDate() != null && searchDto.getSrchToDate() != null) {
-                dateCriteria.andOperator(
-                        Criteria.where("productAvlbDateList").gte(searchDto.getSrchFromDate()),
-                        Criteria.where("productAvlbDateList").lte(searchDto.getSrchToDate())
-                );
-            } else if (searchDto.getSrchFromDate() != null) {
-                dateCriteria.and("productAvlbDateList").gte(searchDto.getSrchFromDate());
-            } else {
-                dateCriteria.and("productAvlbDateList").lte(searchDto.getSrchToDate());
+            // 2. 옵션 조건들
+            if (StringUtils.hasText(searchDto.getProductAdminId())) {
+                criteria.and("crtrId").is(searchDto.getProductAdminId());
             }
-            criteria.andOperator(dateCriteria);
-        }
 
-        // 7. 시간 범위
-        if (StringUtils.hasText(searchDto.getSrchFromTime()) || StringUtils.hasText(searchDto.getSrchToTime())) {
-            criteria.and("productAvlbTimeSlots").elemMatch(
-                    new Criteria().andOperator(
-                            searchDto.getSrchFromTime() != null ?
-                                    Criteria.where("value").gte(searchDto.getSrchFromTime()) : new Criteria(),
-                            searchDto.getSrchToTime() != null ?
-                                    Criteria.where("value").lte(searchDto.getSrchToTime()) : new Criteria()
-                    )
-            );
-        }
+            if (StringUtils.hasText(searchDto.getCategoryId())) {
+                criteria.and("categoryId").is(searchDto.getCategoryId());
+            }
 
-        Query query = new Query(criteria);
-        return mongoTemplate.find(query, Product.class);
+            if (StringUtils.hasText(searchDto.getProductName())) {
+                criteria.and("productName").regex(searchDto.getProductName(), "i");
+            }
+
+            if (StringUtils.hasText(searchDto.getProductPlace())) {
+                criteria.and("productPlace").regex(searchDto.getProductPlace(), "i");
+            }
+
+            // 날짜 조건
+            if (searchDto.getSrchFromDate() != null || searchDto.getSrchToDate() != null) {
+                Criteria dateCriteria = new Criteria();
+                if (searchDto.getSrchFromDate() != null && searchDto.getSrchToDate() != null) {
+                    dateCriteria.andOperator(
+                            Criteria.where("productAvlbDateList").gte(searchDto.getSrchFromDate()),
+                            Criteria.where("productAvlbDateList").lte(searchDto.getSrchToDate())
+                    );
+                } else if (searchDto.getSrchFromDate() != null) {
+                    dateCriteria.and("productAvlbDateList").gte(searchDto.getSrchFromDate());
+                } else {
+                    dateCriteria.and("productAvlbDateList").lte(searchDto.getSrchToDate());
+                }
+                criteria.andOperator(dateCriteria);
+            }
+
+            // 시간 조건
+            if (StringUtils.hasText(searchDto.getSrchFromTime()) || StringUtils.hasText(searchDto.getSrchToTime())) {
+                criteria.and("productAvlbTimeSlots").elemMatch(
+                        new Criteria().andOperator(
+                                searchDto.getSrchFromTime() != null ?
+                                        Criteria.where("value").gte(searchDto.getSrchFromTime()) : new Criteria(),
+                                searchDto.getSrchToTime() != null ?
+                                        Criteria.where("value").lte(searchDto.getSrchToTime()) : new Criteria()
+                        )
+                );
+            }
+
+            Query query = new Query(criteria);
+            List<Product> result = mongoTemplate.find(query, Product.class);
+            log.info("상품 검색 결과 수: {}", result.size());
+            return result;
+        }, userQueryExecutor); // 지정된 Executor에서 실행
     }
 }

@@ -8,6 +8,7 @@ import kr.co.module.core.exception.CategoryNotFoundException;
 import kr.co.module.mapper.repository.AdminCategoryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -19,14 +20,27 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class AdminCategoryService {
 
     private final MongoTemplate mongoTemplate;
     private final AdminCategoryRepository adminCategoryRepository;
+    private final Executor adminQueryExecutor;
+
+    public AdminCategoryService(
+            MongoTemplate mongoTemplate,
+            AdminCategoryRepository adminCategoryRepository,
+            @Qualifier("adminQueryExecutor") Executor adminQueryExecutor
+    ) {
+        this.mongoTemplate = mongoTemplate;
+        this.adminCategoryRepository = adminCategoryRepository;
+        this.adminQueryExecutor = adminQueryExecutor;
+    }
+
 
     // 1. 생성
     public Category createCategory(CategoryCreateDto dto) {
@@ -62,12 +76,13 @@ public class AdminCategoryService {
     }
 
     // 4. 검색
-    public Page<Category> searchCategories(CategorySearchDto searchDto, Pageable pageable) {
-        Query query = buildSearchQuery(searchDto).with(pageable);
-        List<Category> content = mongoTemplate.find(query, Category.class);
-        long total = mongoTemplate.count(query, Category.class);
-
-        return new PageImpl<>(content, pageable, total);
+    public CompletableFuture<Page<Category>> searchCategories(CategorySearchDto searchDto, Pageable pageable) {
+        return CompletableFuture.supplyAsync(() -> {
+            Query query = buildSearchQuery(searchDto).with(pageable); // 조건 + 페이징
+            List<Category> content = mongoTemplate.find(query, Category.class);
+            long total = mongoTemplate.count(query, Category.class);
+            return new PageImpl<>(content, pageable, total);
+        }, adminQueryExecutor);
     }
 
     private void validateDuplicateCategory(String name) {
