@@ -13,6 +13,8 @@ import kr.co.module.mapper.repository.AdminProductRepository;
 import kr.co.module.mapper.repository.UserReservationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -22,6 +24,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 @Slf4j
 @Service
@@ -219,22 +223,25 @@ public class UserReservationService {
     }
 
     // 사용자 예약 목록 검색
+    @Autowired
+    @Qualifier("userQueryExecutor")
+    private Executor userQueryExecutor;
 
-    public List<Reservation> searchUserReservations(ReservationSearchDto searchDto) {
-        Criteria criteria = Criteria.where("userId").is(searchDto.getUserId());
+    public CompletableFuture<List<Reservation>> searchUserReservations(ReservationSearchDto searchDto) {
+        return CompletableFuture.supplyAsync(() -> {
+            Criteria criteria = Criteria.where("userId").is(searchDto.getUserId());
 
-        if (searchDto.getCategoryId() != null) {
-            criteria.and("productCategoryId").is(searchDto.getCategoryId()); // (1)
-        }
+            if (searchDto.getCategoryId() != null) {
+                criteria.and("productCategoryId").is(searchDto.getCategoryId());
+            }
 
-        if (searchDto.getSrchFromDate() != null && searchDto.getSrchToDate() != null) {
-            criteria.and("reservationDate").gte(searchDto.getSrchFromDate())
-                    .lte(searchDto.getSrchToDate());
-        }
+            if (searchDto.getSrchFromDate() != null && searchDto.getSrchToDate() != null) {
+                criteria.and("reservationDate").gte(searchDto.getSrchFromDate())
+                        .lte(searchDto.getSrchToDate());
+            }
 
-        Query query = new Query(criteria);
-        List<Reservation> reservations = mongoTemplate.find(query, Reservation.class); // (2)
-
-        return reservations;
+            Query query = new Query(criteria);
+            return mongoTemplate.find(query, Reservation.class); // 실제 동기 DB 호출을 비동기로 감쌈
+        }, userQueryExecutor);
     }
 }

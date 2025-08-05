@@ -34,59 +34,55 @@ public class ImageUploadService {
 
     @Async("productTaskExecutor")
     public CompletableFuture<List<String>> uploadProductImagesAsync(List<MultipartFile> files, String productId) {
-        // ⭐ 비동기 작업 시작 시 스레드 이름 로깅 ⭐
-        log.info("Image upload started on thread: {}", Thread.currentThread().getName());
-
-        List<String> imageUrls = new ArrayList<>();
-        if (files == null || files.isEmpty()) {
-            return CompletableFuture.completedFuture(imageUrls);
-        }
-
-        try {
-            Path uploadDir = Paths.get(uploadPath, "products", productId);
-            Files.createDirectories(uploadDir);
-
-            for (MultipartFile file : files) {
-                if (!file.isEmpty()) {
-                    String originalFilename = file.getOriginalFilename();
-                    String fileExtension = "";
-                    if (originalFilename != null && originalFilename.contains(".")) {
-                        fileExtension = originalFilename.substring(originalFilename.lastIndexOf("."));
-                    }
-                    String savedFileName = UUID.randomUUID().toString() + fileExtension;
-                    Path filePath = uploadDir.resolve(savedFileName);
-
-                    Files.copy(file.getInputStream(), filePath);
-
-                    String imageUrl = "/images/products/" + productId + "/" + savedFileName;
-                    imageUrls.add(imageUrl);
-                    log.info("Uploaded image: {} for product: {}", savedFileName, productId);
-                }
+        return CompletableFuture.supplyAsync(() -> {
+            log.info("Image upload started on thread: {}", Thread.currentThread().getName());
+            List<String> imageUrls = new ArrayList<>();
+            if (files == null || files.isEmpty()) {
+                return imageUrls;
             }
+            try {
+                Path uploadDir = Paths.get(uploadPath, "products", productId);
+                Files.createDirectories(uploadDir);
 
-            // ⭐ 비동기 작업 완료 전 스레드 이름 로깅 ⭐
-            log.info("Image upload completed on thread: {}", Thread.currentThread().getName());
-        } catch (IOException e) {
-            log.error("Failed to upload images for product {}: {}", productId, e.getMessage());
-            return CompletableFuture.failedFuture(e);
-        }
-        return CompletableFuture.completedFuture(imageUrls);
+                for (MultipartFile file : files) {
+                    if (!file.isEmpty()) {
+                        String originalFilename = file.getOriginalFilename();
+                        String fileExtension = "";
+                        if (originalFilename != null && originalFilename.contains(".")) {
+                            fileExtension = originalFilename.substring(originalFilename.lastIndexOf("."));
+                        }
+                        String savedFileName = UUID.randomUUID().toString() + fileExtension;
+                        Path filePath = uploadDir.resolve(savedFileName);
+
+                        Files.copy(file.getInputStream(), filePath);
+
+                        String imageUrl = "/images/products/" + productId + "/" + savedFileName;
+                        imageUrls.add(imageUrl);
+                        log.info("Uploaded image: {} for product: {}", savedFileName, productId);
+                    }
+                }
+                log.info("Image upload completed on thread: {}", Thread.currentThread().getName());
+                return imageUrls;
+            } catch (IOException e) {
+                log.error("Failed to upload images for product {}: {}", productId, e.getMessage());
+                throw new RuntimeException(e);
+            }
+        }, productTaskExecutor);
     }
 
     @Async("productTaskExecutor")
     public CompletableFuture<Void> deleteProductImagesAsync(List<String> imageUrls) {
-        log.info("Image deletion started on thread: {}", Thread.currentThread().getName());
-
-        if (imageUrls == null || imageUrls.isEmpty()) {
-            log.info("No image URLs to delete.");
-            return CompletableFuture.completedFuture(null);
-        }
-
-        // ⭐ Pass the injected executor ⭐
         return CompletableFuture.runAsync(() -> {
+            log.info("Image deletion started on thread: {}", Thread.currentThread().getName());
+
+            if (imageUrls == null || imageUrls.isEmpty()) {
+                log.info("No image URLs to delete.");
+                return;
+            }
+
             for (String url : imageUrls) {
                 try {
-                    Path filePathToDelete = Paths.get(uploadPath, url.replace("/images/", "")); // Adjust path
+                    Path filePathToDelete = Paths.get(uploadPath, url.replace("/images/", "")); // 실제 서버 경로로 변환
                     Files.deleteIfExists(filePathToDelete);
                     log.info("Deleted image: {}", url);
                 } catch (IOException e) {

@@ -17,6 +17,8 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
+
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -55,25 +57,22 @@ public class AdminProductService {
     }
 
     // 상품 생성
-    public Product createProduct(ProductCreateDto productCreateDto) {
+    public CompletableFuture<Optional<Product>> createProduct(ProductCreateDto productCreateDto) {
         Product product = buildProduct(productCreateDto);
         Product savedProduct = adminProductRepository.save(product);
-        imageUploadService.uploadProductImagesAsync(productCreateDto.getProductImages(), savedProduct.getId())
-                .thenAccept(imageUrls -> {
-                    // 이미지 업로드 성공 후 Product 엔티티 업데이트
+
+        // 이미지 업로드도 비동기, 이미지까지 저장된 Product를 담은 Optional를 비동기로 리턴
+        return imageUploadService.uploadProductImagesAsync(productCreateDto.getProductImages(), savedProduct.getId())
+                .thenApplyAsync(imageUrls -> {
                     savedProduct.setProductImgList(imageUrls);
-                    adminProductRepository.save(savedProduct); // 이미지 URL 업데이트 저장
-                    log.info("Product image URLs updated for product: {}", savedProduct.getId());
+                    Product updated = adminProductRepository.save(savedProduct);
+                    log.info("Product + images saved: {}", updated.getId());
+                    return Optional.of(updated);
                 })
                 .exceptionally(ex -> {
-                    log.error("Failed to upload images and update product for product {}: {}", savedProduct.getId(), ex.getMessage());
-                    // 이미지 업로드 실패 시 대체 로직 또는 롤백 고려
-                    return null; // 예외를 처리하고 null 반환
+                    log.error("이미지 업로드 실패: {}", ex.getMessage());
+                    return Optional.empty();
                 });
-
-        log.info("Product {}", savedProduct.getId());
-        log.info(product.toString());
-        return savedProduct;
     }
 
 
@@ -142,31 +141,52 @@ public class AdminProductService {
     }
 
     // 상품 수정
-    public Product updateProduct(ProductUpdateDto dto) {
-        return adminProductRepository.findById(dto.getProductId())
+    public CompletableFuture<Optional<Product>> updateProduct(ProductUpdateDto dto) {
+        Optional<Product> opt = adminProductRepository.findById(dto.getProductId())
                 .filter(product -> product.getCrtrId().equals(dto.getAdminId()))
-                .filter(product -> product.getAmnrId() != null && product.getAmnrId().equals(dto.getAdminId()))
-                .map(product -> {
-                    updateProductFields(product, dto);
-                    product.setAmnrId(dto.getAdminId());
-                    return adminProductRepository.save(product);
-                })
-                .orElseThrow(() -> new ProductNotFoundException(dto.getProductId()));
+                .filter(product -> product.getAmnrId() != null && product.getAmnrId().equals(dto.getAdminId()));
+
+        if (opt.isEmpty()) return CompletableFuture.completedFuture(Optional.empty());
+
+        Product product = opt.get();
+        updateProductFields(product, dto);
+        product.setAmnrId(dto.getAdminId());
+
+        // 만약 새 이미지가 있을 때만 비동기 업로드가 의미 있으므로
+        if (!CollectionUtils.isEmpty(dto.getNewProductImages())) {
+            return imageUploadService.uploadProductImagesAsync(dto.getNewProductImages(), product.getId())
+                    .thenApplyAsync(newImageUrls -> {
+                        product.setProductImgList(newImageUrls);
+                        Product saved = adminProductRepository.save(product);
+                        return Optional.of(saved);
+                    })
+                    .exceptionally(ex -> {
+                        log.error("이미지 업로드 실패(수정): {}", ex.getMessage());
+                        return Optional.empty();
+                    });
+        } else {
+            // 이미지 관련 변경이 없다면 그냥 동기저장
+            Product saved = adminProductRepository.save(product);
+            return CompletableFuture.completedFuture(Optional.of(saved));
+        }
     }
 
+
     // 상품 삭제
-    public Product deleteProduct(ProductUpdateDto dto) {
-        return adminProductRepository.findById(dto.getProductId())
-                .filter(product -> product.getCrtrId().equals(dto.getAdminId()))  // 생성자 확인
-                .filter(product -> product.getAmnrId() != null && product.getAmnrId().equals(dto.getAdminId()))  // 마지막 수정자 확인
-                .map(product -> {
-                    product.setDltYsno("Y");
-                    product.setAmnrId(dto.getAdminId());
-                    product.setAmndDttm(LocalDateTime.now());
-                    return adminProductRepository.save(product);
-                })
-                .orElseThrow(() -> new ProductNotFoundException(dto.getProductId()));
+    public CompletableFuture<Optional<Product>> deleteProduct(ProductUpdateDto dto) {
+        return CompletableFuture.supplyAsync(() ->
+                adminProductRepository.findById(dto.getProductId())
+                        .filter(product -> product.getCrtrId().equals(dto.getAdminId()))
+                        .filter(product -> product.getAmnrId() != null && product.getAmnrId().equals(dto.getAdminId()))
+                        .map(product -> {
+                            product.setDltYsno("Y");
+                            product.setAmnrId(dto.getAdminId());
+                            product.setAmndDttm(LocalDateTime.now());
+                            return adminProductRepository.save(product);
+                        })
+        );
     }
+
 
     // 상품 검색
     public Page<Product> searchProducts(ProductSearchDto searchDto, Pageable pageable) {

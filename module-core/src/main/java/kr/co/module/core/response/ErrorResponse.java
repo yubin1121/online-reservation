@@ -14,5 +14,4 @@ import java.util.List;
 public class ErrorResponse {
     private String message;
     private String code;
-    private List<String> details;
 }

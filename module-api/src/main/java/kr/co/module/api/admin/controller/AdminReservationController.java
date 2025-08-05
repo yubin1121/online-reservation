@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 @RestController
 @RequiredArgsConstructor
@@ -28,16 +29,26 @@ public class AdminReservationController {
             return ResponseEntity.ok(new ApiResponse<>(true, null, "예약 상태 변경 성공", null));
         } else {
             return ResponseEntity.badRequest().body(
-                    new ErrorResponse(ErrorCode.RESERVATION_UPDATE_FAIL.message(), ErrorCode.RESERVATION_UPDATE_FAIL.code(), null)
+                    new ErrorResponse(ErrorCode.RESERVATION_UPDATE_FAIL.message(), ErrorCode.RESERVATION_UPDATE_FAIL.code())
             );
         }
     }
 
     @GetMapping("search")
-    public ResponseEntity<ApiResponse<List<Reservation>>> searchAdminReservations(
+    public CompletableFuture<ResponseEntity<ApiResponse<List<Reservation>>>> searchAdminReservations(
             @Valid @ModelAttribute AdminReservationSearchDto searchDto
     ) {
-        List<Reservation> result = adminReservationService.searchAdminReservations(searchDto);
-        return ResponseEntity.ok(new ApiResponse<>(true, result, "예약 현황 조회 성공", null));
+        return adminReservationService.searchAdminReservations(searchDto)
+                .thenApply(reservations ->
+                        ResponseEntity.ok(
+                                new ApiResponse<>(true, reservations, "예약 현황 조회 성공", null)
+                        )
+                )
+                .exceptionally(ex -> {
+                    return ResponseEntity.internalServerError().body(
+                            new ApiResponse<>(false, null, null,
+                                    new ErrorResponse("예약 현황 조회 실패", "ADMIN_RESERVATION_SEARCH_ERROR"))
+                    );
+                });
     }
 }

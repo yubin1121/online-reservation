@@ -11,17 +11,18 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/user/product/query")
+@RequestMapping("/user/product")
 public class ProductQueryController {
     private final ProductQueryService productQueryService;
 
 
     @GetMapping("/search")
-    public ResponseEntity<?> searchProducts(
+    public CompletableFuture<ResponseEntity<ApiResponse<List<Product>>>>  searchProducts(
             @ModelAttribute ProductSearchDto searchDto
     ) {
         boolean hasAdminId = searchDto.getProductAdminId() != null;
@@ -30,15 +31,36 @@ public class ProductQueryController {
         boolean hasDateRange = (searchDto.getSrchFromDate() != null && !searchDto.getSrchFromDate().isBlank())
                 || (searchDto.getSrchToDate() != null && !searchDto.getSrchToDate().isBlank());
 
-         if (!(hasAdminId || hasCategoryId || hasPlace || hasDateRange)) {
-             log.info("hasAdminId = " + hasAdminId + ", hasCategoryId = " + hasCategoryId + ", hasPlace = " + hasPlace + ", hasDateRange = " + hasDateRange);
+        if (!(hasAdminId || hasCategoryId || hasPlace || hasDateRange)) {
+            log.info("hasAdminId = {}, hasCategoryId = {}, hasPlace = {}, hasDateRange = {}",
+                    hasAdminId, hasCategoryId, hasPlace, hasDateRange);
 
-             return ResponseEntity.badRequest().body(
-                    new ErrorResponse(ErrorCode.PRODUCT_REQUIRED_CONDITION.message(), ErrorCode.PRODUCT_REQUIRED_CONDITION.code(), null)
+            return CompletableFuture.completedFuture(
+                    ResponseEntity.badRequest().body(
+                            new ApiResponse<>(false, null, null,
+                                    new ErrorResponse(
+                                            ErrorCode.PRODUCT_REQUIRED_CONDITION.message(),
+                                            ErrorCode.PRODUCT_REQUIRED_CONDITION.code()))
+                    )
             );
         }
-        List<Product> result = productQueryService.searchProducts(searchDto);
-        return ResponseEntity.ok(new ApiResponse<>(true, result, "상품 조회 성공", null));
+
+        return productQueryService.searchProducts(searchDto)
+                .thenApply(products ->
+                        ResponseEntity.ok(
+                                new ApiResponse<>(true, products, "상품 조회 성공", null)
+                        ))
+                .exceptionally(ex -> {
+                    log.error("상품 검색 중 오류 발생: {}", ex.getMessage(), ex);
+                    return ResponseEntity.internalServerError().body(
+                            new ApiResponse<>(false, null, null,
+                                    new ErrorResponse(
+                                            "상품 검색 실패",
+                                            "PRODUCT_SEARCH_ERROR"
+                                    )
+                            )
+                    );
+                });
     }
 
 }

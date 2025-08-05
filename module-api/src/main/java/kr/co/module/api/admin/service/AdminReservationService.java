@@ -12,6 +12,7 @@ import kr.co.module.mapper.repository.AdminProductRepository;
 import kr.co.module.mapper.repository.AdminReservationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -23,6 +24,8 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -122,47 +125,52 @@ public class AdminReservationService {
     }
 
 
+    @Qualifier("adminQueryExecutor")
+    private final Executor adminQueryExecutor;
+
     // 2. 예약 검색
-    public List<Reservation> searchAdminReservations(AdminReservationSearchDto searchDto) {
-        // 1. 본인 상품 ID 목록 조회
-        List<String> myProductIds = getMyProductIds(searchDto);
+    public CompletableFuture<List<Reservation>> searchAdminReservations(AdminReservationSearchDto searchDto) {
+        return CompletableFuture.supplyAsync(() -> {
+            // 1. 본인 상품 ID 목록 조회
+            List<String> myProductIds = getMyProductIds(searchDto);
 
-        if (myProductIds.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        // 2. 예약 검색 쿼리 빌드
-        Criteria reservationCriteria = Criteria.where("productId").in(myProductIds);
-
-        // 3. 카테고리 ID 조건
-        if (StringUtils.hasText(searchDto.getCategoryId())) {
-            reservationCriteria.and("productCategoryId").is(searchDto.getCategoryId());
-        }
-
-
-        // 4. 예약 상태 조건
-        if (StringUtils.hasText(searchDto.getReservationStatus())) {
-            reservationCriteria.and("reservationStatus").is(searchDto.getReservationStatus());
-        }
-
-        // 5. 날짜 범위 조건
-        if (searchDto.getFromDate() != null && searchDto.getToDate() != null) {
-            reservationCriteria.and("reservationDate")
-                    .gte(searchDto.getFromDate())
-                    .lte(searchDto.getToDate());
-        } else {
-            if (searchDto.getFromDate() != null) {
-                reservationCriteria.and("reservationDate").gte(searchDto.getFromDate());
+            if (myProductIds.isEmpty()) {
+                return Collections.emptyList();
             }
-            if (searchDto.getToDate() != null) {
-                reservationCriteria.and("reservationDate").lte(searchDto.getToDate());
+
+            // 2. 예약 검색 쿼리 빌드
+            Criteria reservationCriteria = Criteria.where("productId").in(myProductIds);
+
+            // 3. 카테고리 ID 조건
+            if (StringUtils.hasText(searchDto.getCategoryId())) {
+                reservationCriteria.and("productCategoryId").is(searchDto.getCategoryId());
             }
-        }
 
-        Query reservationQuery = new Query(reservationCriteria);
-        return mongoTemplate.find(reservationQuery, Reservation.class);
+            // 4. 예약 상태 조건
+            if (StringUtils.hasText(searchDto.getReservationStatus())) {
+                reservationCriteria.and("reservationStatus").is(searchDto.getReservationStatus());
+            }
 
+            // 5. 날짜 범위 조건
+            if (searchDto.getFromDate() != null && searchDto.getToDate() != null) {
+                reservationCriteria.and("reservationDate")
+                        .gte(searchDto.getFromDate())
+                        .lte(searchDto.getToDate());
+            } else {
+                if (searchDto.getFromDate() != null) {
+                    reservationCriteria.and("reservationDate").gte(searchDto.getFromDate());
+                }
+                if (searchDto.getToDate() != null) {
+                    reservationCriteria.and("reservationDate").lte(searchDto.getToDate());
+                }
+            }
+
+            Query reservationQuery = new Query(reservationCriteria);
+            return mongoTemplate.find(reservationQuery, Reservation.class);
+
+        }, adminQueryExecutor); // 👈 지정된 executor에서 실행
     }
+
 
     // 3. 본인 상품 ID 조회
     private List<String> getMyProductIds(AdminReservationSearchDto searchDto) {

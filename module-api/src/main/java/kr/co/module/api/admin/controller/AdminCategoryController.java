@@ -15,6 +15,8 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.concurrent.CompletableFuture;
+
 @RestController
 @RequestMapping("/admin/category/")
 @RequiredArgsConstructor
@@ -30,7 +32,7 @@ public class AdminCategoryController {
             return ResponseEntity.ok(new ApiResponse<>(true, null, "카테고리 등록 성공", null));
         } else {
             return ResponseEntity.badRequest().body(
-                    new ErrorResponse(ErrorCode.CATEGORY_CREATE_FAIL.message(), ErrorCode.CATEGORY_CREATE_FAIL.code(), null)
+                    new ErrorResponse(ErrorCode.CATEGORY_CREATE_FAIL.message(), ErrorCode.CATEGORY_CREATE_FAIL.code())
             );
         }
     }
@@ -43,7 +45,7 @@ public class AdminCategoryController {
             return ResponseEntity.ok(new ApiResponse<>(true, null, "카테고리 수정 성공", null));
         } else {
             return ResponseEntity.badRequest().body(
-                    new ErrorResponse(ErrorCode.CATEGORY_NOT_FOUND.message(), ErrorCode.CATEGORY_NOT_FOUND.code(), null)
+                    new ErrorResponse(ErrorCode.CATEGORY_NOT_FOUND.message(), ErrorCode.CATEGORY_NOT_FOUND.code())
             );
         }
     }
@@ -56,19 +58,22 @@ public class AdminCategoryController {
             return ResponseEntity.ok(new ApiResponse<>(true, null, "카테고리 삭제 성공", null));
         } else {
             return ResponseEntity.badRequest().body(
-                    new ErrorResponse(ErrorCode.CATEGORY_NOT_FOUND.message(), ErrorCode.CATEGORY_NOT_FOUND.code(), null)
+                    new ErrorResponse(ErrorCode.CATEGORY_NOT_FOUND.message(), ErrorCode.CATEGORY_NOT_FOUND.code())
             );
         }
     }
 
 
     @GetMapping("search")
-    public ResponseEntity<Page<Category>> searchCategories(
+    public CompletableFuture<ResponseEntity<Page<Category>>> searchCategories(
             @ModelAttribute CategorySearchDto searchDto,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
 
-        Page<Category> result = adminCategoryService.searchCategories(searchDto, pageable);
-        return ResponseEntity.ok(result);
+        return adminCategoryService.searchCategories(searchDto, pageable)
+                .thenApply(ResponseEntity::ok)
+                .exceptionally(ex -> {
+                    return ResponseEntity.internalServerError().build();
+                });
     }
 
 

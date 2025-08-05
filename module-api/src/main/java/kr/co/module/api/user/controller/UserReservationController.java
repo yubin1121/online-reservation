@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 @RestController
 @RequiredArgsConstructor
@@ -29,7 +30,7 @@ public class UserReservationController {
             return ResponseEntity.ok(new ApiResponse<>(true, null, "예약 신청 성공", null));
         } else {
             return ResponseEntity.badRequest().body(
-                    new ErrorResponse(ErrorCode.RESERVATION_FAIL.message(), ErrorCode.RESERVATION_FAIL.code(), null)
+                    new ErrorResponse(ErrorCode.RESERVATION_FAIL.message(), ErrorCode.RESERVATION_FAIL.code())
             );
         }
     }
@@ -42,7 +43,7 @@ public class UserReservationController {
             return ResponseEntity.ok(new ApiResponse<>(true, null, "예약 변경 성공", null));
         } else {
             return ResponseEntity.badRequest().body(
-                    new ErrorResponse(ErrorCode.RESERVATION_UPDATE_FAIL.message(), ErrorCode.RESERVATION_UPDATE_FAIL.code(), null)
+                    new ErrorResponse(ErrorCode.RESERVATION_UPDATE_FAIL.message(), ErrorCode.RESERVATION_UPDATE_FAIL.code())
             );
         }
     }
@@ -55,16 +56,27 @@ public class UserReservationController {
             return ResponseEntity.ok(new ApiResponse<>(true, null, "예약 취소 성공", null));
         } else {
             return ResponseEntity.badRequest().body(
-                    new ErrorResponse(ErrorCode.RESERVATION_CANCEL_FAIL.message(), ErrorCode.RESERVATION_CANCEL_FAIL.code(), null)
+                    new ErrorResponse(ErrorCode.RESERVATION_CANCEL_FAIL.message(), ErrorCode.RESERVATION_CANCEL_FAIL.code())
             );
         }
     }
 
     @GetMapping("search")
-    public ResponseEntity<ApiResponse<List<Reservation>>> searchUserReservations(
+    public CompletableFuture<ResponseEntity<ApiResponse<List<Reservation>>>> searchUserReservations(
             @Valid @ModelAttribute ReservationSearchDto searchDto
     ) {
-        List<Reservation> result = userReservationService.searchUserReservations(searchDto);
-        return ResponseEntity.ok(new ApiResponse<>(true, result, "예약 정보 조회 성공", null));
+        return userReservationService.searchUserReservations(searchDto)
+                .thenApply(reservations ->
+                        ResponseEntity.ok(
+                                new ApiResponse<>(true, reservations, "예약 정보 조회 성공", null)
+                        )
+                )
+                .exceptionally(ex -> {
+                    // 오류 발생 시 동일한 제네릭 타입 사용
+                    return ResponseEntity.internalServerError().body(
+                            new ApiResponse<>(false, null, null,
+                                    new ErrorResponse("예약 정보 조회 실패", "RESERVATION_SEARCH_ERROR"))
+                    );
+                });
     }
 }
