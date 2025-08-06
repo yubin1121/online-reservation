@@ -17,6 +17,8 @@ services:
       mongod --replSet rs0 
       --keyFile /etc/mongodb.key 
       --bind_ip_all
+    networks:
+      - mongo-cluster
 
   mongo2:
     image: mongo:6.0
@@ -38,6 +40,8 @@ services:
       mongod --replSet rs0 
       --keyFile /etc/mongodb.key 
       --bind_ip_all
+    networks:
+      - mongo-cluster
 
   mongo3:
     image: mongo:6.0
@@ -59,6 +63,37 @@ services:
       mongod --replSet rs0 
       --keyFile /etc/mongodb.key 
       --bind_ip_all
+    networks:
+      - mongo-cluster
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - kafka-cluster
+
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+    networks:
+      - kafka-cluster
+
 
 volumes:
   mongo1_:
@@ -68,4 +103,6 @@ volumes:
 networks:
   mongo-cluster:
     external: true
-    name: mongoCluster
+    name: spring_multi_module_default
+  kafka-cluster:
+    driver: bridge
