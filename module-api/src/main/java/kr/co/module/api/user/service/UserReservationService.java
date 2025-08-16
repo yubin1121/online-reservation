@@ -1,4 +1,6 @@
 package kr.co.module.api.user.service;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mongodb.client.result.UpdateResult;
 import kr.co.module.api.user.dto.ReservationRequestDto;
 import kr.co.module.api.user.dto.ReservationSearchDto;
@@ -19,6 +21,7 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +38,8 @@ public class UserReservationService {
     private final AdminProductRepository productRepository;
     private final UserReservationRepository reservationRepository;
     private final MongoTemplate mongoTemplate;
+    private final KafkaTemplate<String, String> kafkaTemplate;
+    private final ObjectMapper objectMapper;
 
     private void validateReservation(Product product) {
         if ("Y".equals(product.getDltYsno())) {
@@ -127,8 +132,20 @@ public class UserReservationService {
         Reservation reservation = buildReservation(request, product);
         reservationRepository.save(reservation);
 
-        updateProductStock(product.getId(), -request.getReservationCnt());
-        log.info("예약 생성: {}", reservation);
+        updateProductStock(product.getId(), -request.getReservationCnt());;
+
+        // 예약 이벤트 메시지 JSON 직렬화 후 Kafka 발행
+        try {
+            String json = objectMapper.writeValueAsString(reservation);
+            kafkaTemplate.send("reservation-created-topic", json);
+            log.info("Kafka 발행 완료, reservation ID: {}", reservation.getId());
+        } catch (JsonProcessingException e) {
+            log.error("Kafka 메시지 직렬화 실패", e);
+        }
+
+        log.info("예약 생성 완료: {}", reservation);
+
+        log.info("예약 생성 및 Kafak 메시지 발행: {}", reservation);
         return reservation;
     }
 

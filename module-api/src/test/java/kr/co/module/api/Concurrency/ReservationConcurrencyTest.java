@@ -20,7 +20,6 @@ import org.springframework.test.context.ActiveProfiles;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -107,6 +106,8 @@ public class ReservationConcurrencyTest {
 
             executorService.submit(() -> {
                 try {
+
+                    String threadName = Thread.currentThread().getName();
                     // 예약 요청 DTO 생성
                     ReservationRequestDto requestDto = ReservationRequestDto.builder()
                             .productId(testProductId)
@@ -124,20 +125,23 @@ public class ReservationConcurrencyTest {
                     assertThat(newReservation.getId()).isNotNull();
 
                     successCount.incrementAndGet();
-                    log.debug("Thread {} (User {}) - Reservation success: {}", threadNum, currentUserId, newReservation.getId());
+                    log.debug("Thread [{}] - ThreadNum {} (User {}) - Reservation success: {}", threadName, threadNum, currentUserId, newReservation.getId());
 
                 } catch (InsufficientStockException e) {
+                    String threadName = Thread.currentThread().getName();
                     failCount.incrementAndGet();
-                    log.warn("Thread {} (User {}) - Reservation failed due to insufficient stock: {}", threadNum, currentUserId, e.getMessage());
+                    log.warn("Thread [{}] - ThreadNum {} (User {}) - Reservation failed due to insufficient stock: {}", threadName, threadNum, currentUserId, e.getMessage());
                 } catch (OptimisticLockingFailureException e) {
+                    String threadName = Thread.currentThread().getName();
                     failCount.incrementAndGet();
-                    log.warn("Thread {} (User {}) - Reservation failed due to optimistic locking conflict: {}", threadNum, currentUserId, e.getMessage());
-                    // 낙관적 락 사용 시, 여기에 재시도 로직을 추가할 수 있습니다.
+                    log.warn("Thread [{}] - ThreadNum {} (User {}) - Reservation failed due to optimistic locking conflict: {}", threadName, threadNum, currentUserId, e.getMessage());
+                    // 재시도 로직 추가 가능
                 } catch (Exception e) {
+                    String threadName = Thread.currentThread().getName();
                     failCount.incrementAndGet();
-                    log.error("Thread {} (User {}) - An unexpected error occurred during reservation: {}", threadNum, currentUserId, e.getMessage(), e);
+                    log.error("Thread [{}] - ThreadNum {} (User {}) - Unexpected error during reservation: {}", threadName, threadNum, currentUserId, e.getMessage(), e);
                 } finally {
-                    latch.countDown(); // 작업 완료를 알림
+                    latch.countDown();
                 }
             });
         }

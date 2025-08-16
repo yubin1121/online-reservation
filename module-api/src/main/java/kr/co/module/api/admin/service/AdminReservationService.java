@@ -24,6 +24,7 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
@@ -88,8 +89,8 @@ public class AdminReservationService {
         return adminReservationRepository.save(reservation);
     }
 
-    private void validateReservationOwnership(String productId, String adminId) {
-        if (!adminProductRepository.existsByProductIdAndCrtrId(productId, adminId)) {
+    private void validateReservationOwnership(String id, String adminId) {
+        if (!adminProductRepository.existsByIdAndCrtrId(id, adminId)) {
             throw new UnauthorizedAccessException("해당 상품에 대한 권한이 없습니다");
         }
     }
@@ -189,5 +190,36 @@ public class AdminReservationService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Kafka 이벤트 메시지로 수신한 예약 처리 메서드\
+     */
+    @Transactional
+    public void handleNewReservationEvent(Reservation incomingReservation) {
+        try {
+            // 1. 같은 reservationBizId 예약이 이미 있는지 조회
+            Optional<Reservation> existingOpt = adminReservationRepository.findByReservationBizId(incomingReservation.getReservationBizId());
 
+            if (existingOpt.isPresent()) {
+                Reservation existing = existingOpt.get();
+
+                // 2. 기존 상태와 비교 후 업데이트 필요 시 처리
+                if (!existing.getReservationStatus().equals(incomingReservation.getReservationStatus())) {
+                    existing.setReservationStatus(incomingReservation.getReservationStatus());
+                    existing.setAmnrId(incomingReservation.getAmnrId());
+                    existing.setAmndDttm(LocalDateTime.now());
+                    adminReservationRepository.save(existing);
+                    log.info("기존 예약 상태 업데이트: {}", existing.getId());
+                } else {
+                    log.info("예약 상태 변경 없음: {}", existing.getId());
+                }
+            } else {
+                // 3. 없는 예약은 신규 저장
+                adminReservationRepository.save(incomingReservation);
+                log.info("신규 예약 이벤트 저장: {}", incomingReservation.getId());
+            }
+
+        } catch (Exception e) {
+            log.error("handleNewReservationEvent 처리 중 오류 발생", e);
+        }
+    }
 }

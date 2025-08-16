@@ -6,7 +6,6 @@ import kr.co.module.api.admin.dto.CategoryUpdateDto;
 import kr.co.module.core.domain.Category;
 import kr.co.module.core.exception.CategoryNotFoundException;
 import kr.co.module.mapper.repository.AdminCategoryRepository;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Page;
